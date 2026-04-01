@@ -1,5 +1,29 @@
+# Dependencies
 node_modules/
-.next/
 .pnpm-store/
+
+# Next.js
+.next/
+out/
+.next/
+
+# Environment variables
 .env
+.env.local
+.env.production
+
+# Prisma
+prisma/dev.db
+*.db
+
+# Logs
+logs/
+*.log
+
+# Misc
 .DS_Store
+*.pem
+
+# IDE
+.vscode/
+.idea/
