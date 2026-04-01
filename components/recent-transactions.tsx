@@ -50,8 +50,14 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
                   <div>
                     <p className="font-medium">{transaction.category_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {transaction.wallet_name}
-                      {transaction.description && ` - ${transaction.description}`}
+                      {[
+                        transaction.worker_name,
+                        transaction.partner_name,
+                        transaction.wallet_name,
+                        transaction.description,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
                   </div>
                 </div>

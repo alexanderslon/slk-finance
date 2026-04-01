@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS partner_requests (
   work_comment TEXT,
   customer_phone VARCHAR(50) NOT NULL,
   address TEXT,
+  square_meters DECIMAL(12, 2),
   status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   admin_comment TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

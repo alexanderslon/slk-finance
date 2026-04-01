@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { estimatePartnerRequestBonus } from '@/lib/partner-bonus'
 
 async function ensureExpenseCategory(name: string): Promise<number> {
   const rows = await sql`SELECT id FROM categories WHERE name = ${name} AND type = 'expense' LIMIT 1`
@@ -64,7 +65,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { customer_phone, address, work_comment } = await request.json()
+    const body = await request.json()
+    const { customer_phone, address, work_comment } = body
+    const rawSqm = body.square_meters
+    let squareMeters: number | null = null
+    if (rawSqm !== undefined && rawSqm !== null && rawSqm !== '') {
+      const n = Number(rawSqm)
+      if (!Number.isFinite(n) || n < 0) {
+        return NextResponse.json({ error: 'Укажите корректную квадратуру (м²)' }, { status: 400 })
+      }
+      squareMeters = Math.floor(n)
+      if (squareMeters === 0) {
+        squareMeters = null
+      }
+    }
 
     if (!customer_phone) {
       return NextResponse.json({ error: 'Укажите номер заказчика' }, { status: 400 })
@@ -73,8 +87,8 @@ export async function POST(request: NextRequest) {
     const categoryId = await ensureExpenseCategory('Сантехника')
 
     const result = await sql`
-      INSERT INTO partner_requests (partner_id, category_id, amount, work_comment, customer_phone, address)
-      VALUES (${user.partner_id}, ${categoryId}, 0, ${work_comment || null}, ${customer_phone}, ${address || null})
+      INSERT INTO partner_requests (partner_id, category_id, amount, work_comment, customer_phone, address, square_meters)
+      VALUES (${user.partner_id}, ${categoryId}, 0, ${work_comment || null}, ${customer_phone}, ${address || null}, ${squareMeters})
       RETURNING *
     `
 
@@ -94,15 +108,18 @@ export async function PUT(request: NextRequest) {
 
     const { id, status, admin_comment, wallet_id } = await request.json()
 
-    const before = await sql`SELECT id, partner_id, category_id, amount, status FROM partner_requests WHERE id = ${id}`
+    const before = await sql`SELECT * FROM partner_requests WHERE id = ${id}`
     const prev = before[0]
     if (!prev) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    // Update request status
+    const approvedTotal =
+      status === 'approved' ? estimatePartnerRequestBonus(prev.square_meters) : Number(prev.amount)
+
+    // Update request status (сумма заявки = итоговый бонус при одобрении: база + м²)
     const result = await sql`
       UPDATE partner_requests
       SET status = ${status}, admin_comment = ${admin_comment}, updated_at = NOW(),
-          amount = CASE WHEN ${status} = 'approved' THEN 1000 ELSE amount END
+          amount = ${approvedTotal}
       WHERE id = ${id}
       RETURNING *
     `
@@ -111,20 +128,20 @@ export async function PUT(request: NextRequest) {
     let bonusAwarded = 0
     if (status === 'approved' && wallet_id) {
       const req = result[0]
-      
+
       // Create expense transaction
       await sql`
         INSERT INTO transactions (wallet_id, category_id, type, amount, description, partner_id)
         VALUES (${wallet_id}, ${req.category_id}, 'expense', ${req.amount}, 
-                ${'Заявка от партнера: ' + (req.description || '')}, ${req.partner_id})
+                ${'Заявка от партнера'}, ${req.partner_id})
       `
 
       // Update wallet balance
       await sql`UPDATE wallets SET balance = balance - ${req.amount} WHERE id = ${wallet_id}`
 
-      // Award partner bonus only on first approval transition
+      // Начислить партнёру тот же итог, что и в заявке (1000 + 1000×м²), только при первом одобрении
       if (prev.status !== 'approved') {
-        bonusAwarded = 1000
+        bonusAwarded = Number(req.amount)
         await sql`
           UPDATE partners
           SET bonus_balance = COALESCE(bonus_balance, 0) + ${bonusAwarded}

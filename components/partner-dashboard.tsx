@@ -15,10 +15,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, FileText, Check, X, Clock } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { RuPhoneField } from '@/components/ru-phone-field'
+import { isCompleteRuMobile, ruPhoneDigits, formatCustomerPhoneDisplay } from '@/lib/phone-format'
+import { Plus, FileText, Check, X, Clock, Sparkles } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { PartnerRequest, Category } from '@/lib/db'
+import {
+  estimatePartnerRequestBonus,
+  PARTNER_BONUS_BASE_RUB,
+  PARTNER_BONUS_PER_SQM_RUB,
+  PARTNER_SQM_SELECT_OPTIONS,
+} from '@/lib/partner-bonus'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -48,6 +63,9 @@ export function PartnerDashboard({
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [sqmChoice, setSqmChoice] = useState<string>('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [phoneError, setPhoneError] = useState('')
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length
   const approvedCount = requests.filter((r) => r.status === 'approved').length
@@ -55,13 +73,20 @@ export function PartnerDashboard({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    setPhoneError('')
+    if (!isCompleteRuMobile(ruPhoneDigits(customerPhone))) {
+      setPhoneError('Введите полный номер: +7 и 10 цифр')
+      return
+    }
+
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
     const data = {
-      customer_phone: (formData.get('customer_phone') as string) || '',
+      customer_phone: customerPhone.trim(),
       address: (formData.get('address') as string) || null,
       work_comment: (formData.get('work_comment') as string) || null,
+      ...(sqmChoice ? { square_meters: sqmChoice } : {}),
     }
 
     try {
@@ -73,6 +98,7 @@ export function PartnerDashboard({
 
       if (res.ok) {
         setIsOpen(false)
+        setCustomerPhone('')
         router.refresh()
       }
     } finally {
@@ -87,7 +113,17 @@ export function PartnerDashboard({
           <h1 className="text-2xl font-bold">Мои заявки</h1>
           <p className="text-muted-foreground">Создавайте заявки на расходы</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog
+          open={isOpen}
+          onOpenChange={(open) => {
+            setIsOpen(open)
+            if (open) {
+              setSqmChoice('')
+              setCustomerPhone('')
+              setPhoneError('')
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -101,17 +137,49 @@ export function PartnerDashboard({
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="customer_phone">Номер заказчика</Label>
-                <Input
+                <RuPhoneField
                   id="customer_phone"
-                  name="customer_phone"
-                  placeholder="+7 (999) 123-45-67"
-                  required
+                  value={customerPhone}
+                  onChange={(v) => {
+                    setCustomerPhone(v)
+                    setPhoneError('')
+                  }}
                 />
+                {phoneError ? (
+                  <p className="text-sm text-destructive">{phoneError}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Вводите цифры — номер подставится в формат +7 (999) 123-45-67
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="address">Адрес (необязательно)</Label>
                 <Input id="address" name="address" placeholder="Город, улица, дом, кв." />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="square_meters">Квадратура, м² (необязательно)</Label>
+                <Select
+                  value={sqmChoice === '' ? 'none' : sqmChoice}
+                  onValueChange={(v) => setSqmChoice(v === 'none' ? '' : v)}
+                >
+                  <SelectTrigger id="square_meters" className="w-full">
+                    <SelectValue placeholder="Не указывать" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Не указывать</SelectItem>
+                    {PARTNER_SQM_SELECT_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        {m} м²
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Целые м²: к бонусу +{PARTNER_BONUS_PER_SQM_RUB.toLocaleString('ru-RU')} ₽ за каждый м²
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -121,6 +189,25 @@ export function PartnerDashboard({
                   name="work_comment"
                   placeholder="Например: установить унитаз/смеситель, заменить трубы..."
                 />
+              </div>
+
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Предположительный бонус
+                </div>
+                <p className="text-2xl font-bold tabular-nums">
+                  {formatCurrency(
+                    estimatePartnerRequestBonus(sqmChoice === '' ? null : Number(sqmChoice)),
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {PARTNER_BONUS_BASE_RUB.toLocaleString('ru-RU')} ₽ за заявку
+                  {sqmChoice
+                    ? ` + ${sqmChoice} × ${PARTNER_BONUS_PER_SQM_RUB.toLocaleString('ru-RU')} ₽ за м²`
+                    : ' (квадратура не указана — без доплаты за м²)'}
+                  . Фактическое начисление после одобрения администратором может отличаться.
+                </p>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
@@ -216,8 +303,15 @@ export function PartnerDashboard({
                             {config.label}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">Заказчик: {request.customer_phone}</p>
+                        <p className="text-sm text-muted-foreground font-mono tabular-nums">
+                          Заказчик: {formatCustomerPhoneDisplay(request.customer_phone)}
+                        </p>
                         {request.address && <p className="text-sm text-muted-foreground">Адрес: {request.address}</p>}
+                        {request.square_meters != null && Number(request.square_meters) > 0 && (
+                          <p className="text-sm text-muted-foreground">
+                            Квадратура: {Math.floor(Number(request.square_meters))} м²
+                          </p>
+                        )}
                         {request.work_comment && (
                           <p className="text-sm text-muted-foreground">{request.work_comment}</p>
                         )}
@@ -231,9 +325,17 @@ export function PartnerDashboard({
                         )}
                       </div>
                     </div>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(Number(request.amount))}
-                    </p>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-muted-foreground">Предположительный бонус</p>
+                      <p className="text-lg font-semibold text-primary tabular-nums">
+                        {formatCurrency(estimatePartnerRequestBonus(request.square_meters))}
+                      </p>
+                      {request.status === 'approved' && Number(request.amount) > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Списание: {formatCurrency(Number(request.amount))}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )
               })}

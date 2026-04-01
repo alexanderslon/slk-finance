@@ -24,6 +24,8 @@ import { FileText, Check, X, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { PartnerRequest, Wallet } from '@/lib/db'
+import { estimatePartnerRequestBonus } from '@/lib/partner-bonus'
+import { formatCustomerPhoneDisplay } from '@/lib/phone-format'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -115,7 +117,9 @@ export function RequestsManager({
                 </div>
                 <div>
                   <span className="text-muted-foreground">Номер заказчика:</span>
-                  <p className="mt-1">{selectedRequest.customer_phone}</p>
+                  <p className="mt-1 font-mono tabular-nums">
+                    {formatCustomerPhoneDisplay(selectedRequest.customer_phone)}
+                  </p>
                 </div>
                 {selectedRequest.address && (
                   <div>
@@ -123,6 +127,18 @@ export function RequestsManager({
                     <p className="mt-1">{selectedRequest.address}</p>
                   </div>
                 )}
+                {selectedRequest.square_meters != null && Number(selectedRequest.square_meters) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Квадратура:</span>
+                    <span className="font-medium">{Math.floor(Number(selectedRequest.square_meters))} м²</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Предположительный бонус:</span>
+                  <span className="font-medium">
+                    {formatCurrency(estimatePartnerRequestBonus(selectedRequest.square_meters))}
+                  </span>
+                </div>
                 {selectedRequest.work_comment && (
                   <div>
                     <span className="text-muted-foreground">Комментарий:</span>
@@ -223,7 +239,13 @@ export function RequestsManager({
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {request.category_name}
-                          {request.customer_phone && ` · ${request.customer_phone}`}
+                          {request.customer_phone &&
+                            ` · ${formatCustomerPhoneDisplay(request.customer_phone)}`}
+                          {request.square_meters != null && Number(request.square_meters) > 0
+                            ? ` · ${Math.floor(Number(request.square_meters))} м²`
+                            : ''}
+                          {' · '}
+                          бонус ~{formatCurrency(estimatePartnerRequestBonus(request.square_meters))}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {format(new Date(request.created_at), 'd MMM yyyy, HH:mm', { locale: ru })}

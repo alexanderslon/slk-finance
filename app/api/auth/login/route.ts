@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loginAdmin, loginPartner } from '@/lib/auth'
-import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, type } = await request.json()
+    let body: { username?: string; password?: string; type?: string }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Некорректный запрос' }, { status: 400 })
+    }
+
+    const { username, password, type } = body
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Введите логин и пароль' }, { status: 400 })
@@ -21,8 +27,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 401 })
     }
 
-    const cookieStore = await cookies()
-    cookieStore.set('session_token', result.token, {
+    // next/headers cookies().set() в Route Handlers на Vercel/Next 15+ часто падает;
+    // привязка к NextResponse надёжнее для Set-Cookie.
+    const response = NextResponse.json({ success: true })
+    response.cookies.set('session_token', result.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -30,7 +38,7 @@ export async function POST(request: NextRequest) {
       path: '/',
     })
 
-    return NextResponse.json({ success: true })
+    return response
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 })

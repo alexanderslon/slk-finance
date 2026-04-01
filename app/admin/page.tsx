@@ -3,9 +3,20 @@ import { DashboardStats } from '@/components/dashboard-stats'
 import { WalletCards } from '@/components/wallet-cards'
 import { RecentTransactions } from '@/components/recent-transactions'
 import { GoalProgress } from '@/components/goal-progress'
+import { buildMonthSelectOptionsFromBounds } from '@/lib/transaction-dates'
+
+function defaultCalendarMonthKey(): string {
+  const n = new Date()
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
+}
 
 async function getDashboardData() {
-  const [wallets, transactions, debts, goals, stats] = await Promise.all([
+  const defaultMonth = defaultCalendarMonthKey()
+  const [y, m] = defaultMonth.split('-').map(Number)
+  const monthStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0))
+  const monthEnd = new Date(Date.UTC(y, m, 1, 0, 0, 0, 0))
+
+  const [wallets, transactions, debts, goals, bounds, monthStats] = await Promise.all([
     sql`SELECT * FROM wallets ORDER BY created_at DESC`,
     sql`
       SELECT t.*, c.name as category_name, w.name as wallet_name,
@@ -22,10 +33,17 @@ async function getDashboardData() {
     sql`SELECT * FROM goals ORDER BY created_at DESC`,
     sql`
       SELECT 
+        to_char(date_trunc('month', MIN(created_at)), 'YYYY-MM') as min_ym,
+        to_char(date_trunc('month', MAX(created_at)), 'YYYY-MM') as max_ym
+      FROM transactions
+    `,
+    sql`
+      SELECT 
         COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as total_income,
         COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as total_expenses
       FROM transactions
-      WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
+      WHERE created_at >= ${monthStart.toISOString()}
+        AND created_at < ${monthEnd.toISOString()}
     `,
   ])
 
@@ -37,22 +55,31 @@ async function getDashboardData() {
     .filter((d: { type: string }) => d.type === 'taken')
     .reduce((sum: number, d: { amount: number }) => sum + Number(d.amount), 0)
 
+  const b = bounds[0]
+  const monthOptions = buildMonthSelectOptionsFromBounds(b?.min_ym ?? null, b?.max_ym ?? null)
+
+  const ms = monthStats[0]
+  const initialIncome = Number(ms?.total_income ?? 0)
+  const initialExpenses = Number(ms?.total_expenses ?? 0)
+
   return {
     wallets,
     transactions,
     goals,
-    stats: {
+    dashboard: {
       totalBalance,
-      totalIncome: Number(stats[0]?.total_income || 0),
-      totalExpenses: Number(stats[0]?.total_expenses || 0),
       totalDebtGiven,
       totalDebtTaken,
+      monthOptions,
+      initialMonth: defaultMonth,
+      initialIncome,
+      initialExpenses,
     },
   }
 }
 
 export default async function AdminDashboard() {
-  const { wallets, transactions, goals, stats } = await getDashboardData()
+  const { wallets, transactions, goals, dashboard } = await getDashboardData()
 
   return (
     <div className="space-y-6">
@@ -61,7 +88,15 @@ export default async function AdminDashboard() {
         <p className="text-muted-foreground">Общая статистика финансов</p>
       </div>
 
-      <DashboardStats stats={stats} />
+      <DashboardStats
+        totalBalance={dashboard.totalBalance}
+        totalDebtGiven={dashboard.totalDebtGiven}
+        totalDebtTaken={dashboard.totalDebtTaken}
+        monthOptions={dashboard.monthOptions}
+        initialMonth={dashboard.initialMonth}
+        initialIncome={dashboard.initialIncome}
+        initialExpenses={dashboard.initialExpenses}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <WalletCards wallets={wallets} />

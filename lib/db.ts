@@ -127,6 +127,8 @@ export type PartnerRequest = {
   work_comment?: string
   customer_phone: string
   address?: string
+  /** Площадь объекта, м² (необязательно) */
+  square_meters?: number | null
   status: 'pending' | 'approved' | 'rejected'
   admin_comment?: string
   created_at: Date

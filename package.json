@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "WATCHPACK_POLLING=true WATCHPACK_POLLING_INTERVAL=1000 next dev --hostname 127.0.0.1 --port 3001",
+    "dev:mobile": "WATCHPACK_POLLING=true WATCHPACK_POLLING_INTERVAL=1000 next dev --hostname 0.0.0.0 --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."

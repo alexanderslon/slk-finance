@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,8 +30,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Plus, Pencil, Trash2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
-import { format } from 'date-fns'
-import { ru } from 'date-fns/locale'
+import {
+  transactionMonthKey,
+  transactionMonthTitleRu,
+  formatTransactionDateRu,
+  buildMonthSelectOptions,
+} from '@/lib/transaction-dates'
 import type { Transaction, Wallet, Category, Partner, Worker } from '@/lib/db'
 
 function formatCurrency(amount: number) {
@@ -40,6 +44,11 @@ function formatCurrency(amount: number) {
     currency: 'RUB',
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+function counterpartyLabel(t: Transaction): string {
+  const parts = [t.worker_name, t.partner_name].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : '—'
 }
 
 type Props = {
@@ -64,9 +73,39 @@ export function TransactionsManager({
   const [isOpen, setIsOpen] = useState(false)
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null)
   const [loading, setLoading] = useState(false)
+  const [monthFilter, setMonthFilter] = useState<string>('all')
+
+  useEffect(() => {
+    setTransactions(initialTransactions)
+  }, [initialTransactions])
 
   const Icon = type === 'income' ? ArrowUpCircle : ArrowDownCircle
   const colorClass = type === 'income' ? 'text-success' : 'text-destructive'
+
+  const monthOptions = useMemo(
+    () => buildMonthSelectOptions(initialTransactions),
+    [initialTransactions],
+  )
+
+  const filteredTransactions = useMemo(() => {
+    if (monthFilter === 'all') return transactions
+    return transactions.filter((t) => transactionMonthKey(t.created_at) === monthFilter)
+  }, [transactions, monthFilter])
+
+  const groupedByMonth = useMemo(() => {
+    const map = new Map<string, Transaction[]>()
+    for (const t of filteredTransactions) {
+      const key = transactionMonthKey(t.created_at)
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(t)
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [filteredTransactions])
+
+  const periodTotal = useMemo(
+    () => filteredTransactions.reduce((s, t) => s + Number(t.amount), 0),
+    [filteredTransactions],
+  )
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -113,9 +152,75 @@ export function TransactionsManager({
     }
   }
 
+  function renderTableRows(items: Transaction[]) {
+    return items.map((t) => (
+      <TableRow key={t.id}>
+        <TableCell className="whitespace-nowrap">
+          {formatTransactionDateRu(t.created_at)}
+        </TableCell>
+        <TableCell>{t.category_name}</TableCell>
+        <TableCell className="max-w-[220px]">
+          <span className="font-medium text-foreground">{counterpartyLabel(t)}</span>
+        </TableCell>
+        <TableCell>{t.wallet_name}</TableCell>
+        <TableCell className="max-w-[200px] truncate">{t.description || '-'}</TableCell>
+        <TableCell className={`text-right font-medium ${colorClass}`}>
+          {type === 'income' ? '+' : '-'}
+          {formatCurrency(Number(t.amount))}
+        </TableCell>
+        <TableCell>
+          <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setEditTransaction(t)
+                setIsOpen(true)
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={() => handleDelete(t.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    ))
+  }
+
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <Label htmlFor="month-filter" className="text-muted-foreground whitespace-nowrap">
+            Период
+          </Label>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger id="month-filter" className="w-[min(100%,280px)]">
+              <SelectValue placeholder="Месяц" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все месяцы (по группам)</SelectItem>
+              {monthOptions.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {transactionMonthTitleRu(key)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className={`text-sm font-semibold tabular-nums ${colorClass}`}>
+            {monthFilter === 'all' ? 'Всего' : 'За месяц'}: {type === 'income' ? '+' : '-'}
+            {formatCurrency(periodTotal)}
+          </span>
+        </div>
+        <div className="flex justify-end sm:justify-end">
         <Dialog open={isOpen} onOpenChange={(open) => {
           setIsOpen(open)
           if (!open) setEditTransaction(null)
@@ -237,6 +342,7 @@ export function TransactionsManager({
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card className="border-border bg-card">
@@ -249,60 +355,42 @@ export function TransactionsManager({
         <CardContent>
           {transactions.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Нет операций</p>
+          ) : filteredTransactions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              Нет операций за выбранный месяц
+            </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Дата</TableHead>
-                    <TableHead>Категория</TableHead>
-                    <TableHead>Кошелек</TableHead>
-                    <TableHead>Описание</TableHead>
-                    <TableHead className="text-right">Сумма</TableHead>
-                    <TableHead className="w-24"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="whitespace-nowrap">
-                        {format(new Date(t.created_at), 'd MMM yyyy', { locale: ru })}
-                      </TableCell>
-                      <TableCell>{t.category_name}</TableCell>
-                      <TableCell>{t.wallet_name}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {t.description || '-'}
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${colorClass}`}>
-                        {type === 'income' ? '+' : '-'}{formatCurrency(Number(t.amount))}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              setEditTransaction(t)
-                              setIsOpen(true)
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(t.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="space-y-8 overflow-x-auto">
+              {groupedByMonth.map(([key, rows]) => {
+                const blockTotal = rows.reduce((s, t) => s + Number(t.amount), 0)
+                return (
+                  <div key={key}>
+                    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+                      <h3 className="text-base font-semibold capitalize text-foreground">
+                        {transactionMonthTitleRu(key)}
+                      </h3>
+                      <span className={`text-sm font-medium tabular-nums ${colorClass}`}>
+                        Итого: {type === 'income' ? '+' : '-'}
+                        {formatCurrency(blockTotal)}
+                      </span>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Дата</TableHead>
+                          <TableHead>Категория</TableHead>
+                          <TableHead>Получатель</TableHead>
+                          <TableHead>Кошелек</TableHead>
+                          <TableHead>Описание</TableHead>
+                          <TableHead className="text-right">Сумма</TableHead>
+                          <TableHead className="w-24"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>{renderTableRows(rows)}</TableBody>
+                    </Table>
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>

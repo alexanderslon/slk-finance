@@ -43,9 +43,13 @@ INSERT INTO partners (name, phone, email) VALUES
 ('Партнер 1', '+7 (999) 111-22-33', 'partner1@example.com')
 ON CONFLICT DO NOTHING;
 
--- Sample partner user (password will be set via UI/admin tools)
+-- Sample partner user: логин = телефон как в partners.phone, пароль 31337 (тот же SHA-256, что в lib/auth.ts)
 INSERT INTO partner_users (partner_id, username, password_hash, is_active)
-SELECT p.id, 'partner1', 'dev-only', TRUE
+SELECT
+  p.id,
+  p.phone,
+  '78de47dc208df623042d4803741b4ff50299c1ff5b4d32384ea77b6ee452069f',
+  TRUE
 FROM partners p
 WHERE p.name = 'Партнер 1'
 ON CONFLICT (username) DO NOTHING;

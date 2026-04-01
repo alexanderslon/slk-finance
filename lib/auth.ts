@@ -107,18 +107,35 @@ export async function loginAdmin(username: string, password: string) {
   return { token, user }
 }
 
+/** Логин партнёра — телефон в любом виде или точное имя пользователя (как в БД). */
 export async function loginPartner(username: string, password: string) {
+  const trimmed = username.trim()
+  const digitsOnly = trimmed.replace(/\D/g, '')
+
   const rows = await sql`
     SELECT * FROM partner_users
-    WHERE username = ${username} AND is_active = true
+    WHERE is_active = true
+    AND (
+      username = ${trimmed}
+      OR (
+        char_length(${digitsOnly}) >= 10
+        AND regexp_replace(username, '[^0-9]', '', 'g') = ${digitsOnly}
+      )
+    )
+    LIMIT 2
   `
+
+  if (rows.length > 1) {
+    return { error: 'Неверный логин или пароль' }
+  }
+
   const user = rows[0]
 
   if (!user) return { error: 'Неверный логин или пароль' }
 
   const isValid = await verifyPassword(password, user.password_hash)
   if (!isValid) return { error: 'Неверный логин или пароль' }
-  
+
   const token = await createSession(user.id, 'partner')
   return { token, user }
 }
