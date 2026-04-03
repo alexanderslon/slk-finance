@@ -9,29 +9,21 @@ export async function GET() {
     
     console.log('[v0] Password hash generated:', passwordHash)
 
-    const usersResult = await sql`SELECT * FROM users`
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Admin (slk) and partner (partner1) created with password 31337',
-      usersResult
-    })
-    
     // Delete existing users first
     await sql`DELETE FROM sessions`
     await sql`DELETE FROM users WHERE username IN ('slk', 'partner1')`
     
     // Create admin user
     await sql`
-      INSERT INTO users (username, password_hash, role, status)
-      VALUES ('slk', ${passwordHash}, 'admin', 'approved')
+      INSERT INTO users (username, password_hash, role, status, bonus_balance, phone)
+      VALUES ('slk', ${passwordHash}, 'admin', 'approved', 0, '+7 (999) 111-22-44')
     `
     
     // Create sample partner with same password
-    await sql`
-      INSERT INTO users (username, phone, password_hash, role, status, bonus_balance)
-      VALUES ('partner1', '+7 (999) 111-22-33', ${passwordHash}, 'partner', 'approved', 2000)
-    `
+    // await sql`
+    //   INSERT INTO users (username, phone, password_hash, role, status, bonus_balance)
+    //   VALUES ('partner1', '+7 (999) 111-22-33', ${passwordHash}, 'partner', 'approved', 2000)
+    // `
     
     // Verify users were created
     const users = await sql`SELECT id, username, role, status FROM users`
