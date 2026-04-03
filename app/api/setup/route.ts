@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
+import { log } from 'console'
 
 export async function GET() {
   try {
@@ -8,6 +9,8 @@ export async function GET() {
     const passwordHash = await hashPassword('31337')
     
     console.log('[v0] Password hash generated:', passwordHash)
+
+    console.log('asdfadf ', process.env.DATABASE_URL?.trim() ?? 'no database url')
 
     const users1 = await sql`SELECT * FROM users`
     console.log('[v0] Users in database:', users1)
