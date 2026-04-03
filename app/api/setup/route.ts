@@ -9,6 +9,9 @@ export async function GET() {
     
     console.log('[v0] Password hash generated:', passwordHash)
 
+    const users1 = await sql`SELECT * FROM users`
+    console.log('[v0] Users in database:', users1)
+
     // Delete existing users first
     // await sql`DELETE FROM sessions`
     // await sql`DELETE FROM users`
