@@ -8,6 +8,14 @@ export async function GET() {
     const passwordHash = await hashPassword('31337')
     
     console.log('[v0] Password hash generated:', passwordHash)
+
+    const usersResult = await sql`SELECT * FROM users`
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Admin (slk) and partner (partner1) created with password 31337',
+      usersResult
+    })
     
     // Delete existing users first
     await sql`DELETE FROM sessions`
