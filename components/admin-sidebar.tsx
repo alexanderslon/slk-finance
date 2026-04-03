@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
 
 const navItems = [
@@ -32,7 +33,13 @@ const navItems = [
   { href: '/admin/requests', label: 'Заявки', icon: FileText },
 ]
 
-export function AdminSidebar({ username }: { username: string }) {
+export function AdminSidebar({
+  username,
+  pendingRequests,
+}: {
+  username: string
+  pendingRequests: number
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -93,7 +100,12 @@ export function AdminSidebar({ username }: { username: string }) {
                 )}
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.href === '/admin/requests' && pendingRequests > 0 ? (
+                  <Badge variant="destructive" className="min-w-5 px-1.5 py-0 text-[10px]">
+                    {pendingRequests}
+                  </Badge>
+                ) : null}
               </Link>
             )
           })}

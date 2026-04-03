@@ -25,6 +25,7 @@ type Props = {
   totalBalance: number
   totalDebtGiven: number
   totalDebtTaken: number
+  pendingRequests: number
   monthOptions: string[]
   initialMonth: string
   initialIncome: number
@@ -35,6 +36,7 @@ export function DashboardStats({
   totalBalance,
   totalDebtGiven,
   totalDebtTaken,
+  pendingRequests,
   monthOptions,
   initialMonth,
   initialIncome,
@@ -86,7 +88,7 @@ export function DashboardStats({
         {loading ? <span className="text-xs text-muted-foreground">Обновление…</span> : null}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Общий баланс</CardTitle>
@@ -141,6 +143,16 @@ export function DashboardStats({
                 <span className="font-medium text-destructive">{formatCurrency(totalDebtTaken)}</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Новые заявки</CardTitle>
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-warning" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingRequests}</div>
           </CardContent>
         </Card>
       </div>

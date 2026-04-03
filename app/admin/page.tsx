@@ -16,7 +16,7 @@ async function getDashboardData() {
   const monthStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0))
   const monthEnd = new Date(Date.UTC(y, m, 1, 0, 0, 0, 0))
 
-  const [wallets, transactions, debts, goals, bounds, monthStats] = await Promise.all([
+  const [wallets, transactions, debts, goals, bounds, monthStats, pendingRows] = await Promise.all([
     sql`SELECT * FROM wallets ORDER BY created_at DESC`,
     sql`
       SELECT t.*, c.name as category_name, w.name as wallet_name,
@@ -45,6 +45,11 @@ async function getDashboardData() {
       WHERE created_at >= ${monthStart.toISOString()}
         AND created_at < ${monthEnd.toISOString()}
     `,
+    sql`
+      SELECT COUNT(*)::text as count
+      FROM partner_requests
+      WHERE status = 'pending'
+    `,
   ])
 
   const totalBalance = wallets.reduce((sum: number, w: { balance: number }) => sum + Number(w.balance), 0)
@@ -61,6 +66,7 @@ async function getDashboardData() {
   const ms = monthStats[0]
   const initialIncome = Number(ms?.total_income ?? 0)
   const initialExpenses = Number(ms?.total_expenses ?? 0)
+  const pendingRequests = Number(pendingRows[0]?.count ?? 0)
 
   return {
     wallets,
@@ -74,6 +80,7 @@ async function getDashboardData() {
       initialMonth: defaultMonth,
       initialIncome,
       initialExpenses,
+      pendingRequests,
     },
   }
 }
@@ -92,6 +99,7 @@ export default async function AdminDashboard() {
         totalBalance={dashboard.totalBalance}
         totalDebtGiven={dashboard.totalDebtGiven}
         totalDebtTaken={dashboard.totalDebtTaken}
+        pendingRequests={dashboard.pendingRequests}
         monthOptions={dashboard.monthOptions}
         initialMonth={dashboard.initialMonth}
         initialIncome={dashboard.initialIncome}

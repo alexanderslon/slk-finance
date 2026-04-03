@@ -1,6 +1,22 @@
 import { neon } from '@neondatabase/serverless'
 import postgres from 'postgres'
 
+function requireDatabaseUrl(): string {
+  const u = process.env.DATABASE_URL?.trim()
+  if (!u) {
+    throw new Error(
+      'DATABASE_URL не задан. В Vercel: Project → Settings → Environment Variables → добавь строку подключения Neon (Production). Локально — в файле .env',
+    )
+  }
+  // Neon: в консоли лучше взять «Pooled connection» для serverless/Vercel.
+  if (u.includes('localhost') || u.includes('127.0.0.1')) {
+    console.warn(
+      '[db] DATABASE_URL указывает на localhost — на Vercel это не сработает, нужен URL из Neon.',
+    )
+  }
+  return u
+}
+
 function isLocalPostgresUrl(url: string): boolean {
   try {
     const u = new URL(url)
@@ -13,7 +29,7 @@ function isLocalPostgresUrl(url: string): boolean {
   }
 }
 
-const databaseUrl = process.env.DATABASE_URL!
+const databaseUrl = requireDatabaseUrl()
 
 // neon() is great for Neon (serverless) Postgres, but it uses fetch and won't work with local Postgres on localhost:5432.
 function normalizeLocalDatabaseUrl(url: string): string {

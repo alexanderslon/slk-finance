@@ -20,12 +20,15 @@ async function getData() {
 
 export default async function RequestsPage() {
   const { requests, wallets } = await getData()
+  const pendingCount = requests.filter((r: { status: string }) => r.status === 'pending').length
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Заявки от партнеров</h1>
-        <p className="text-muted-foreground">Обработка заявок на расходы</p>
+        <p className="text-muted-foreground">
+          Обработка заявок на расходы · Новые: {pendingCount}
+        </p>
       </div>
 
       <RequestsManager initialRequests={requests} wallets={wallets} />
