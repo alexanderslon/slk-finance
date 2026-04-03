@@ -11,7 +11,7 @@ export async function GET() {
 
     // Delete existing users first
     await sql`DELETE FROM sessions`
-    await sql`DELETE FROM users WHERE username IN ('slk', 'partner1')`
+    await sql`DELETE FROM users`
     
     // Create admin user
     await sql`
