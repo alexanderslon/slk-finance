@@ -10,13 +10,21 @@ export async function GET() {
     console.log('[v0] Password hash generated:', passwordHash)
 
     // Delete existing users first
-    await sql`DELETE FROM sessions`
-    await sql`DELETE FROM users`
+    // await sql`DELETE FROM sessions`
+    // await sql`DELETE FROM users`
     
-    // Create admin user
-    await sql`
-      INSERT INTO users (username, password_hash, role, status, bonus_balance, phone)
-      VALUES ('slk', ${passwordHash}, 'admin', 'approved', 0, '+7 (999) 111-22-44')
+    // Обновить пользователя с id = 1 (пароль 31337, админ)
+    const updated = await sql`
+      UPDATE users
+      SET
+        username = 'slk',
+        password_hash = ${passwordHash},
+        role = 'admin',
+        status = 'approved',
+        bonus_balance = 0,
+        phone = '+7 (999) 111-22-44'
+      WHERE id = 1
+      RETURNING id, username, role, status, phone
     `
     
     // Create sample partner with same password
@@ -29,10 +37,14 @@ export async function GET() {
     const users = await sql`SELECT id, username, role, status FROM users`
     console.log('[v0] Users in database:', users)
     
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Admin (slk) and partner (partner1) created with password 31337',
-      users
+    return NextResponse.json({
+      success: true,
+      message:
+        updated.length > 0
+          ? 'Пользователь id=1 обновлён (slk, пароль 31337)'
+          : 'Строка с id=1 не найдена — UPDATE не затронул ни одной записи',
+      updated,
+      users,
     })
   } catch (error) {
     console.error('Setup error:', error)
