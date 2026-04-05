@@ -9,12 +9,13 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
 import {
   Select,
   SelectContent,
@@ -107,13 +108,13 @@ export function PartnerDashboard({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Мои заявки</h1>
-          <p className="text-muted-foreground">Создавайте заявки на расходы</p>
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold leading-tight sm:text-2xl">Мои заявки</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">Создавайте заявки на расходы</p>
         </div>
-        <Dialog
+        <Drawer
           open={isOpen}
           onOpenChange={(open) => {
             setIsOpen(open)
@@ -123,146 +124,178 @@ export function PartnerDashboard({
               setPhoneError('')
             }
           }}
+          fixed
+          repositionInputs={false}
         >
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+          <DrawerTrigger asChild>
+            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+              <Plus className="h-4 w-4 shrink-0" />
               Новая заявка
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Заявка на установку сантехники</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customer_phone">Номер заказчика</Label>
-                <RuPhoneField
-                  id="customer_phone"
-                  value={customerPhone}
-                  onChange={(v) => {
-                    setCustomerPhone(v)
-                    setPhoneError('')
-                  }}
-                />
-                {phoneError ? (
-                  <p className="text-sm text-destructive">{phoneError}</p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Вводите цифры — номер подставится в формат +7 (999) 123-45-67
-                  </p>
-                )}
-              </div>
+          </DrawerTrigger>
+          <DrawerContent className="flex max-h-[min(92dvh,calc(100svh-1rem))] flex-col gap-0 overflow-hidden p-0 pt-[env(safe-area-inset-top,0px)] [&>div:first-child]:mt-2">
+            <DrawerHeader className="shrink-0 space-y-1 border-b border-border px-4 pb-3 pt-1 text-left sm:pt-0">
+              <DrawerTitle className="text-lg leading-snug">Заявка на установку сантехники</DrawerTitle>
+              <DrawerDescription className="sr-only">
+                Укажите телефон заказчика и при необходимости адрес и комментарий
+              </DrawerDescription>
+            </DrawerHeader>
+            <form
+              onSubmit={handleSubmit}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <div
+                className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-2 pt-2 [-webkit-overflow-scrolling:touch]"
+                style={{
+                  scrollPaddingTop: 'max(1.25rem, env(safe-area-inset-top, 0px))',
+                  scrollPaddingBottom: '12px',
+                }}
+              >
+                <div className="space-y-4 pb-2">
+                  <div className="space-y-2 scroll-mt-[max(0.5rem,env(safe-area-inset-top,0px))]">
+                    <Label htmlFor="customer_phone">Номер заказчика</Label>
+                    <RuPhoneField
+                      id="customer_phone"
+                      value={customerPhone}
+                      onChange={(v) => {
+                        setCustomerPhone(v)
+                        setPhoneError('')
+                      }}
+                    />
+                    {phoneError ? (
+                      <p className="text-sm text-destructive">{phoneError}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        Вводите цифры — номер в формате +7 (999) 123-45-67
+                      </p>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Адрес (необязательно)</Label>
-                <Input id="address" name="address" placeholder="Город, улица, дом, кв." />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Адрес (необязательно)</Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      placeholder="Город, улица, дом, кв."
+                      className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="square_meters">Квадратура, м² (необязательно)</Label>
-                <Select
-                  value={sqmChoice === '' ? 'none' : sqmChoice}
-                  onValueChange={(v) => setSqmChoice(v === 'none' ? '' : v)}
-                >
-                  <SelectTrigger id="square_meters" className="w-full">
-                    <SelectValue placeholder="Не указывать" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Не указывать</SelectItem>
-                    {PARTNER_SQM_SELECT_OPTIONS.map((m) => (
-                      <SelectItem key={m} value={String(m)}>
-                        {m} м²
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Целые м²: к бонусу +{PARTNER_BONUS_PER_SQM_RUB.toLocaleString('ru-RU')} ₽ за каждый м²
-                </p>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="square_meters">Квадратура, м² (необязательно)</Label>
+                    <Select
+                      value={sqmChoice === '' ? 'none' : sqmChoice}
+                      onValueChange={(v) => setSqmChoice(v === 'none' ? '' : v)}
+                    >
+                      <SelectTrigger id="square_meters" className="min-h-11 w-full text-base sm:min-h-10 sm:text-sm">
+                        <SelectValue placeholder="Не указывать" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Не указывать</SelectItem>
+                        {PARTNER_SQM_SELECT_OPTIONS.map((m) => (
+                          <SelectItem key={m} value={String(m)}>
+                            {m} м²
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      Целые м²: к бонусу +{PARTNER_BONUS_PER_SQM_RUB.toLocaleString('ru-RU')} ₽ за каждый м²
+                    </p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="work_comment">Комментарий (что нужно сделать)</Label>
-                <Textarea
-                  id="work_comment"
-                  name="work_comment"
-                  placeholder="Например: установить унитаз/смеситель, заменить трубы..."
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="work_comment">Комментарий (что нужно сделать)</Label>
+                    <Textarea
+                      id="work_comment"
+                      name="work_comment"
+                      placeholder="Например: установить унитаз/смеситель, заменить трубы..."
+                      className="min-h-[100px] text-base sm:text-sm"
+                    />
+                  </div>
 
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Предположительный бонус
+                  <div className="space-y-1 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                      Предположительный бонус
+                    </div>
+                    <p className="text-2xl font-bold tabular-nums">
+                      {formatCurrency(
+                        estimatePartnerRequestBonus(sqmChoice === '' ? null : Number(sqmChoice)),
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {PARTNER_BONUS_BASE_RUB.toLocaleString('ru-RU')} ₽ за заявку
+                      {sqmChoice
+                        ? ` + ${sqmChoice} × ${PARTNER_BONUS_PER_SQM_RUB.toLocaleString('ru-RU')} ₽ за м²`
+                        : ' (квадратура не указана — без доплаты за м²)'}
+                      . Фактическое начисление после одобрения администратором может отличаться.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold tabular-nums">
-                  {formatCurrency(
-                    estimatePartnerRequestBonus(sqmChoice === '' ? null : Number(sqmChoice)),
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {PARTNER_BONUS_BASE_RUB.toLocaleString('ru-RU')} ₽ за заявку
-                  {sqmChoice
-                    ? ` + ${sqmChoice} × ${PARTNER_BONUS_PER_SQM_RUB.toLocaleString('ru-RU')} ₽ за м²`
-                    : ' (квадратура не указана — без доплаты за м²)'}
-                  . Фактическое начисление после одобрения администратором может отличаться.
-                </p>
               </div>
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Отправка...' : 'Отправить заявку'}
-              </Button>
+              <div
+                className="shrink-0 border-t border-border bg-background px-4 pt-3 shadow-[0_-4px_12px_rgba(0,0,0,0.15)]"
+                style={{
+                  paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
+                }}
+              >
+                <Button type="submit" className="h-11 w-full sm:h-10" disabled={loading}>
+                  {loading ? 'Отправка...' : 'Отправить заявку'}
+                </Button>
+              </div>
             </form>
-          </DialogContent>
-        </Dialog>
+          </DrawerContent>
+        </Drawer>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Plus className="h-6 w-6 text-primary" />
+          <CardContent className="flex items-center gap-3 p-4 pt-5 sm:gap-4 sm:pt-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 sm:h-12 sm:w-12">
+              <Plus className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <p className="text-2xl font-bold">{formatCurrency(Number(bonusBalance))}</p>
-              <p className="text-sm text-muted-foreground">Бонус</p>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-bold tabular-nums sm:text-2xl">
+                {formatCurrency(Number(bonusBalance))}
+              </p>
+              <p className="text-xs text-muted-foreground sm:text-sm">Бонус</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
-              <Clock className="h-6 w-6 text-warning" />
+          <CardContent className="flex items-center gap-3 p-4 pt-5 sm:gap-4 sm:pt-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 sm:h-12 sm:w-12">
+              <Clock className="h-5 w-5 text-warning sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <p className="text-2xl font-bold">{pendingCount}</p>
-              <p className="text-sm text-muted-foreground">На рассмотрении</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
-              <Check className="h-6 w-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{approvedCount}</p>
-              <p className="text-sm text-muted-foreground">Одобрено</p>
+            <div className="min-w-0">
+              <p className="text-lg font-bold tabular-nums sm:text-2xl">{pendingCount}</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">На рассмотрении</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
-              <X className="h-6 w-6 text-destructive" />
+          <CardContent className="flex items-center gap-3 p-4 pt-5 sm:gap-4 sm:pt-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/10 sm:h-12 sm:w-12">
+              <Check className="h-5 w-5 text-success sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <p className="text-2xl font-bold">{rejectedCount}</p>
-              <p className="text-sm text-muted-foreground">Отклонено</p>
+            <div className="min-w-0">
+              <p className="text-lg font-bold tabular-nums sm:text-2xl">{approvedCount}</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">Одобрено</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-3 p-4 pt-5 sm:gap-4 sm:pt-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 sm:h-12 sm:w-12">
+              <X className="h-5 w-5 text-destructive sm:h-6 sm:w-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-lg font-bold tabular-nums sm:text-2xl">{rejectedCount}</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">Отклонено</p>
             </div>
           </CardContent>
         </Card>

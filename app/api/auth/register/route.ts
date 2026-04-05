@@ -3,6 +3,13 @@ import { registerPartner } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.ALLOW_PUBLIC_REGISTRATION !== 'true'
+    ) {
+      return NextResponse.json({ error: 'Регистрация отключена' }, { status: 403 })
+    }
+
     const { name, phone, password } = await request.json()
 
     if (!name || !phone || !password) {

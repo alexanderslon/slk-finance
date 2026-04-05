@@ -33,13 +33,16 @@ export function RuPhoneField({
       <Input
         id={id}
         type="tel"
-        inputMode="numeric"
+        inputMode="tel"
         autoComplete="tel"
         placeholder="+7 (999) 123-45-67"
         value={value}
         disabled={disabled}
         required={required}
-        className={cn('font-mono text-base tracking-tight tabular-nums', className)}
+        className={cn(
+          'min-h-11 scroll-mt-[max(1.25rem,env(safe-area-inset-top,0px))] font-mono text-base tracking-tight tabular-nums sm:min-h-10 sm:text-sm',
+          className,
+        )}
         onChange={(e) => {
           onChange(formatRuPhoneInput(e.target.value))
         }}

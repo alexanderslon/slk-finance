@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       result = await loginPartner(username, password)
     }
 
-    if (result.error) {
+    if ('error' in result) {
       return NextResponse.json({ error: result.error }, { status: 401 })
     }
 

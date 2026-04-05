@@ -14,11 +14,11 @@ export default async function AdminLayout({
     redirect('/')
   }
 
-  const pendingRows = await sql<{ count: string }[]>`
+  const pendingRows = (await sql`
     SELECT COUNT(*)::text as count
     FROM partner_requests
     WHERE status = 'pending'
-  `
+  `) as { count: string }[]
   const pendingRequests = Number(pendingRows[0]?.count ?? 0)
 
   return (

@@ -44,9 +44,17 @@ function normalizeLocalDatabaseUrl(url: string): string {
   }
 }
 
-export const sql = isLocalPostgresUrl(databaseUrl)
+/** Neon и postgres.js дают несовместимые типы tagged template; приводим к одному вызову. */
+export type SqlTagged = (
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+) => Promise<any[]>
+
+const dbClient = isLocalPostgresUrl(databaseUrl)
   ? postgres(normalizeLocalDatabaseUrl(databaseUrl))
   : neon(databaseUrl)
+
+export const sql = dbClient as unknown as SqlTagged
 
 export type User = {
   id: number

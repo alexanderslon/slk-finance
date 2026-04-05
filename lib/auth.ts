@@ -14,7 +14,19 @@ async function ensureDevDefaultAdmin(username: string, password: string) {
   `
 }
 
+let warnedDefaultSalt = false
+
 export async function hashPassword(password: string): Promise<string> {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !process.env.PASSWORD_SALT?.trim() &&
+    !warnedDefaultSalt
+  ) {
+    warnedDefaultSalt = true
+    console.warn(
+      '[auth] В production задайте PASSWORD_SALT в окружении; иначе используется соль по умолчанию из кода.',
+    )
+  }
   const encoder = new TextEncoder()
   const data = encoder.encode(password + (process.env.PASSWORD_SALT || 'slk-finance-salt'))
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
