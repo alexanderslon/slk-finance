@@ -27,7 +27,7 @@ export default async function RequestsPage() {
       <div className="space-y-1">
         <h1 className="text-xl font-bold leading-tight sm:text-2xl">Заявки от партнеров</h1>
         <p className="text-sm text-muted-foreground sm:text-base">
-          Обработка заявок на расходы · Новые: {pendingCount}
+          Заявки на начисление бонуса · Новые: {pendingCount}
         </p>
       </div>
 

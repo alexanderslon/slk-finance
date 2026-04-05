@@ -113,7 +113,9 @@ export function PartnerDashboard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-xl font-bold leading-tight sm:text-2xl">Мои заявки</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">Создавайте заявки на расходы</p>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Создайте заявку для получения бонуса
+          </p>
         </div>
         <Drawer
           open={newRequestOpen}
@@ -314,7 +316,7 @@ export function PartnerDashboard({
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-lg font-medium">Нет заявок</p>
-              <p className="text-muted-foreground">Создайте первую заявку</p>
+              <p className="text-muted-foreground">Создайте заявку для получения бонуса</p>
             </div>
           ) : (
             <div className="space-y-3">

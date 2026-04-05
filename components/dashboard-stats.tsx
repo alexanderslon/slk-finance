@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { format } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -10,8 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Wallet, ArrowUpCircle, ArrowDownCircle, CreditCard } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import { Wallet, ArrowUpCircle, ArrowDownCircle, CreditCard, ChevronDown, FileText } from 'lucide-react'
 import { transactionMonthTitleRu } from '@/lib/transaction-dates'
+import { cn } from '@/lib/utils'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -19,6 +30,12 @@ function formatCurrency(amount: number) {
     currency: 'RUB',
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+function transactionMonthShortRu(yyyyMm: string): string {
+  const [y, m] = yyyyMm.split('-').map(Number)
+  if (!y || !m) return yyyyMm
+  return format(new Date(y, m - 1, 1), 'LLL yyyy', { locale: ru })
 }
 
 type Props = {
@@ -46,6 +63,7 @@ export function DashboardStats({
   const [income, setIncome] = useState(initialIncome)
   const [expenses, setExpenses] = useState(initialExpenses)
   const [loading, setLoading] = useState(false)
+  const [monthSheetOpen, setMonthSheetOpen] = useState(false)
 
   useEffect(() => {
     setMonth(initialMonth)
@@ -67,31 +85,196 @@ export function DashboardStats({
     }
   }
 
+  async function pickMonthFromSheet(value: string) {
+    setMonthSheetOpen(false)
+    await onMonthChange(value)
+  }
+
   return (
     <div className="space-y-3 sm:space-y-4">
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card/50 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-4">
-        <Label htmlFor="dashboard-month" className="shrink-0 text-sm text-muted-foreground sm:text-base">
-          Месяц (доходы и расходы)
-        </Label>
-        <Select value={month} onValueChange={onMonthChange} disabled={loading}>
-          <SelectTrigger
-            id="dashboard-month"
-            className="h-11 w-full min-w-0 text-base sm:h-10 sm:w-[min(100%,280px)] sm:text-sm"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {monthOptions.map((key) => (
-              <SelectItem key={key} value={key}>
-                {transactionMonthTitleRu(key)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {loading ? <span className="text-xs text-muted-foreground">Обновление…</span> : null}
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-bold leading-tight sm:text-2xl">Дашборд</h1>
+          <p className="mt-0.5 hidden text-sm text-muted-foreground md:block">
+            Общая статистика финансов
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            <Sheet open={monthSheetOpen} onOpenChange={setMonthSheetOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-11 gap-1.5 px-3 text-sm font-medium md:hidden"
+                  disabled={loading || monthOptions.length === 0}
+                  aria-label="Выбрать месяц для доходов и расходов"
+                >
+                  Месяц
+                  <ChevronDown className="h-4 w-4 opacity-70" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="bottom"
+                className="z-50 max-h-[min(85dvh,32rem)] rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
+              >
+                <SheetHeader className="border-b border-border pb-3 text-left">
+                  <SheetTitle>Месяц</SheetTitle>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    Доходы и расходы за выбранный месяц
+                  </p>
+                </SheetHeader>
+                <div
+                  className="-mx-4 max-h-[55vh] overflow-y-auto px-4 pt-2 [-webkit-overflow-scrolling:touch]"
+                  role="listbox"
+                  aria-label="Список месяцев"
+                >
+                  {monthOptions.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Нет данных по месяцам</p>
+                  ) : (
+                    <div className="flex flex-col gap-1 pb-2">
+                      {monthOptions.map((key) => {
+                        const selected = key === month
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            disabled={loading}
+                            onClick={() => void pickMonthFromSheet(key)}
+                            className={cn(
+                              'min-h-11 w-full rounded-xl px-3 py-2.5 text-left text-base transition-colors',
+                              selected
+                                ? 'bg-primary/15 font-medium text-primary'
+                                : 'active:bg-muted',
+                            )}
+                          >
+                            {transactionMonthTitleRu(key)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <div className="hidden items-center gap-2 md:flex">
+              <Label
+                htmlFor="dashboard-month"
+                className="shrink-0 whitespace-nowrap text-sm text-muted-foreground"
+              >
+                Месяц
+              </Label>
+              <Select value={month} onValueChange={onMonthChange} disabled={loading}>
+                <SelectTrigger
+                  id="dashboard-month"
+                  className="h-10 w-[min(100%,280px)] text-sm"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {transactionMonthTitleRu(key)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {loading ? <span className="text-xs text-muted-foreground">Обновление…</span> : null}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+      {/* Mobile: компактные карточки как в партнёрке */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:hidden">
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Wallet className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-bold tabular-nums leading-tight">
+                {formatCurrency(totalBalance)}
+              </p>
+              <p className="text-[11px] leading-tight text-muted-foreground">Баланс</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success/10">
+              <ArrowUpCircle className="h-4 w-4 text-success" />
+            </div>
+            <div className="min-w-0">
+              <p
+                className={cn(
+                  'truncate text-base font-bold tabular-nums leading-tight text-success',
+                  loading && 'opacity-50',
+                )}
+              >
+                {formatCurrency(income)}
+              </p>
+              <p className="text-[11px] leading-tight text-muted-foreground">
+                Доход · {transactionMonthShortRu(month)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+              <ArrowDownCircle className="h-4 w-4 text-destructive" />
+            </div>
+            <div className="min-w-0">
+              <p
+                className={cn(
+                  'truncate text-base font-bold tabular-nums leading-tight text-destructive',
+                  loading && 'opacity-50',
+                )}
+              >
+                {formatCurrency(expenses)}
+              </p>
+              <p className="text-[11px] leading-tight text-muted-foreground">
+                Расход · {transactionMonthShortRu(month)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warning/10">
+              <FileText className="h-4 w-4 text-warning" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-bold tabular-nums leading-tight">{pendingRequests}</p>
+              <p className="text-[11px] leading-tight text-muted-foreground">Новые заявки</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div
+        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-border bg-card/60 px-3 py-2.5 text-[11px] leading-snug text-muted-foreground md:hidden"
+        aria-label="Долги"
+      >
+        <span>
+          Дал: <span className="font-semibold text-success">{formatCurrency(totalDebtGiven)}</span>
+        </span>
+        <span>
+          Взял: <span className="font-semibold text-destructive">{formatCurrency(totalDebtTaken)}</span>
+        </span>
+      </div>
+
+      {/* Desktop / tablet: прежняя сетка из пяти карточек */}
+      <div className="hidden grid-cols-2 gap-3 sm:gap-4 md:grid lg:grid-cols-3 xl:grid-cols-5">
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
             <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">Общий баланс</CardTitle>
