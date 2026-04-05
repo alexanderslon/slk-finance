@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { RuPhoneField } from '@/components/ru-phone-field'
 import { Wallet, Users, UserPlus } from 'lucide-react'
 
 export function LoginForm() {
@@ -15,6 +16,8 @@ export function LoginForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showRegister, setShowRegister] = useState(false)
+  const [partnerPhone, setPartnerPhone] = useState('')
+  const [regPhone, setRegPhone] = useState('')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>, type: 'admin' | 'partner') {
     e.preventDefault()
@@ -82,20 +85,28 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md border-border bg-card">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
-          <Wallet className="h-8 w-8 text-primary-foreground" />
+    <Card className="w-full max-w-md border-border bg-card shadow-lg">
+      <CardHeader className="space-y-2 px-4 pb-2 pt-6 text-center sm:px-6">
+        <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary sm:mb-4 sm:h-16 sm:w-16">
+          <Wallet className="h-7 w-7 text-primary-foreground sm:h-8 sm:w-8" />
         </div>
-        <CardTitle className="text-2xl font-bold">SLK Finance</CardTitle>
-        <CardDescription>Система учета доходов и расходов</CardDescription>
+        <CardTitle className="text-xl font-bold sm:text-2xl">SLK Finance</CardTitle>
+        <CardDescription className="text-sm sm:text-base">Система учета доходов и расходов</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 pb-6 sm:px-6">
         {showRegister ? (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Регистрация партнера</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowRegister(false)}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base font-semibold sm:text-lg">Регистрация партнера</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="min-h-10 shrink-0"
+                onClick={() => {
+                  setShowRegister(false)
+                  setRegPhone('')
+                }}
+              >
                 Назад
               </Button>
             </div>
@@ -111,10 +122,11 @@ export function LoginForm() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="reg-phone">Телефон (будет логином)</Label>
-                <Input
+                <RuPhoneField
                   id="reg-phone"
                   name="phone"
-                  placeholder="+7 (999) 123-45-67"
+                  value={regPhone}
+                  onChange={setRegPhone}
                   required
                 />
               </div>
@@ -150,7 +162,7 @@ export function LoginForm() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="admin" className="mt-6">
+            <TabsContent value="admin" className="mt-4 sm:mt-6">
               <form onSubmit={(e) => handleSubmit(e, 'admin')} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="admin-username">Логин</Label>
@@ -158,6 +170,7 @@ export function LoginForm() {
                     id="admin-username"
                     name="username"
                     placeholder="Введите логин"
+                    autoComplete="username"
                     required
                   />
                 </div>
@@ -168,6 +181,7 @@ export function LoginForm() {
                     name="password"
                     type="password"
                     placeholder="Введите пароль"
+                    autoComplete="current-password"
                     required
                   />
                 </div>
@@ -179,14 +193,15 @@ export function LoginForm() {
               </form>
             </TabsContent>
 
-            <TabsContent value="partner" className="mt-6">
+            <TabsContent value="partner" className="mt-4 sm:mt-6">
               <form onSubmit={(e) => handleSubmit(e, 'partner')} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="partner-username">Телефон</Label>
-                  <Input
+                  <RuPhoneField
                     id="partner-username"
                     name="username"
-                    placeholder="+7 (999) 123-45-67"
+                    value={partnerPhone}
+                    onChange={setPartnerPhone}
                     required
                   />
                 </div>
@@ -197,6 +212,7 @@ export function LoginForm() {
                     name="password"
                     type="password"
                     placeholder="Введите пароль"
+                    autoComplete="current-password"
                     required
                   />
                 </div>

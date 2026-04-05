@@ -3,35 +3,11 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard,
-  Wallet,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  CreditCard,
-  Target,
-  Users,
-  Handshake,
-  FileText,
-  LogOut,
-  Menu,
-  X,
-} from 'lucide-react'
+import { Wallet, LogOut, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
-
-const navItems = [
-  { href: '/admin', label: 'Дашборд', icon: LayoutDashboard },
-  { href: '/admin/wallets', label: 'Кошельки', icon: Wallet },
-  { href: '/admin/income', label: 'Доходы', icon: ArrowUpCircle },
-  { href: '/admin/expenses', label: 'Расходы', icon: ArrowDownCircle },
-  { href: '/admin/debts', label: 'Долги', icon: CreditCard },
-  { href: '/admin/goals', label: 'Цели', icon: Target },
-  { href: '/admin/workers', label: 'Работники', icon: Users },
-  { href: '/admin/partners', label: 'Партнеры', icon: Handshake },
-  { href: '/admin/requests', label: 'Заявки', icon: FileText },
-]
+import { ADMIN_NAV_ITEMS } from '@/lib/admin-nav'
 
 export function AdminSidebar({
   username,
@@ -94,7 +70,7 @@ export function AdminSidebar({
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:p-4">
-          {navItems.map((item) => {
+          {ADMIN_NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link

@@ -143,20 +143,24 @@ export function PartnersManager({
 
   return (
     <Tabs defaultValue="partners" className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="partners">Партнеры</TabsTrigger>
-        <TabsTrigger value="accounts">Аккаунты</TabsTrigger>
+      <TabsList className="w-full">
+        <TabsTrigger value="partners" className="flex-1">
+          Партнеры
+        </TabsTrigger>
+        <TabsTrigger value="accounts" className="flex-1">
+          Аккаунты
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="partners" className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           <Dialog open={isPartnerOpen} onOpenChange={(open) => {
             setIsPartnerOpen(open)
             if (!open) setEditPartner(null)
           }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
+              <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+                <Plus className="h-4 w-4 shrink-0" />
                 Добавить партнера
               </Button>
             </DialogTrigger>
@@ -216,71 +220,117 @@ export function PartnersManager({
             {partners.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Нет партнеров</p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Название</TableHead>
-                      <TableHead>Телефон</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Аккаунты</TableHead>
-                      <TableHead className="w-24"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {partners.map((partner) => {
-                      const userCount = partnerUsers.filter((u) => u.partner_id === partner.id).length
-                      return (
-                        <TableRow key={partner.id}>
-                          <TableCell className="font-medium">{partner.name}</TableCell>
-                          <TableCell>{partner.phone || '-'}</TableCell>
-                          <TableCell>{partner.email || '-'}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{userCount}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => {
-                                  setEditPartner(partner)
-                                  setIsPartnerOpen(true)
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => handlePartnerDelete(partner.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+              <>
+                <div className="space-y-3 md:hidden">
+                  {partners.map((partner) => {
+                    const userCount = partnerUsers.filter((u) => u.partner_id === partner.id).length
+                    return (
+                      <div
+                        key={partner.id}
+                        className="rounded-xl border border-border bg-secondary/30 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold">{partner.name}</p>
+                            <p className="mt-1 text-sm text-muted-foreground">{partner.phone || '—'}</p>
+                            {partner.email ? (
+                              <p className="mt-0.5 break-all text-sm text-muted-foreground">{partner.email}</p>
+                            ) : null}
+                          </div>
+                          <div className="flex shrink-0 gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditPartner(partner)
+                                setIsPartnerOpen(true)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handlePartnerDelete(partner.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                          <span className="text-sm text-muted-foreground">Аккаунты</span>
+                          <Badge variant="outline">{userCount}</Badge>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
+                  <Table className="min-w-[640px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Название</TableHead>
+                        <TableHead>Телефон</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Аккаунты</TableHead>
+                        <TableHead className="w-24"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {partners.map((partner) => {
+                        const userCount = partnerUsers.filter((u) => u.partner_id === partner.id).length
+                        return (
+                          <TableRow key={partner.id}>
+                            <TableCell className="font-medium">{partner.name}</TableCell>
+                            <TableCell>{partner.phone || '-'}</TableCell>
+                            <TableCell>{partner.email || '-'}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{userCount}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setEditPartner(partner)
+                                    setIsPartnerOpen(true)
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => handlePartnerDelete(partner.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       </TabsContent>
 
       <TabsContent value="accounts" className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           <Dialog open={isUserOpen} onOpenChange={(open) => {
             setIsUserOpen(open)
             if (!open) setEditUser(null)
           }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <UserPlus className="h-4 w-4" />
+              <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+                <UserPlus className="h-4 w-4 shrink-0" />
                 Создать аккаунт
               </Button>
             </DialogTrigger>
@@ -348,61 +398,109 @@ export function PartnersManager({
             {partnerUsers.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Нет аккаунтов</p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Логин</TableHead>
-                      <TableHead>Партнер</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead>Активен</TableHead>
-                      <TableHead className="w-24"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {partnerUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.username}</TableCell>
-                        <TableCell>{user.partner_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                            {user.is_active ? 'Активен' : 'Заблокирован'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
+              <>
+                <div className="space-y-3 md:hidden">
+                  {partnerUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      className="rounded-xl border border-border bg-secondary/30 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-mono font-semibold tabular-nums">{user.username}</p>
+                          <p className="text-sm text-muted-foreground">{user.partner_name}</p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditUser(user)
+                              setIsUserOpen(true)
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleUserDelete(user.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+                        <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                          {user.is_active ? 'Активен' : 'Заблокирован'}
+                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Вкл.</span>
                           <Switch
                             checked={user.is_active}
                             onCheckedChange={() => handleToggleActive(user)}
                           />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => {
-                                setEditUser(user)
-                                setIsUserOpen(true)
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleUserDelete(user.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
+                  <Table className="min-w-[640px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Логин</TableHead>
+                        <TableHead>Партнер</TableHead>
+                        <TableHead>Статус</TableHead>
+                        <TableHead>Активен</TableHead>
+                        <TableHead className="w-24"></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {partnerUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.username}</TableCell>
+                          <TableCell>{user.partner_name}</TableCell>
+                          <TableCell>
+                            <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                              {user.is_active ? 'Активен' : 'Заблокирован'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={user.is_active}
+                              onCheckedChange={() => handleToggleActive(user)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditUser(user)
+                                  setIsUserOpen(true)
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleUserDelete(user.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

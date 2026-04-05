@@ -165,15 +165,15 @@ export function DebtsManager({ initialDebts }: { initialDebts: Debt[] }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex gap-4">
-          <Card className="border-border bg-card px-6 py-4">
-            <p className="text-sm text-muted-foreground">Дали в долг</p>
-            <p className="text-xl font-bold text-success">{formatCurrency(totalGiven)}</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-4">
+          <Card className="border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
+            <p className="text-xs text-muted-foreground sm:text-sm">Дали в долг</p>
+            <p className="text-lg font-bold tabular-nums text-success sm:text-xl">{formatCurrency(totalGiven)}</p>
           </Card>
-          <Card className="border-border bg-card px-6 py-4">
-            <p className="text-sm text-muted-foreground">Взяли в долг</p>
-            <p className="text-xl font-bold text-destructive">{formatCurrency(totalTaken)}</p>
+          <Card className="border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
+            <p className="text-xs text-muted-foreground sm:text-sm">Взяли в долг</p>
+            <p className="text-lg font-bold tabular-nums text-destructive sm:text-xl">{formatCurrency(totalTaken)}</p>
           </Card>
         </div>
 
@@ -182,8 +182,8 @@ export function DebtsManager({ initialDebts }: { initialDebts: Debt[] }) {
           if (!open) setEditDebt(null)
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto sm:shrink-0">
+              <Plus className="h-4 w-4 shrink-0" />
               Добавить долг
             </Button>
           </DialogTrigger>

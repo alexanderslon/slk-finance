@@ -103,14 +103,14 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex justify-stretch sm:justify-end">
         <Dialog open={isOpen} onOpenChange={(open) => {
           setIsOpen(open)
           if (!open) setEditGoal(null)
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+              <Plus className="h-4 w-4 shrink-0" />
               Добавить цель
             </Button>
           </DialogTrigger>

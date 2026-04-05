@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { usePartnerUi } from '@/contexts/partner-ui-context'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -62,7 +63,7 @@ export function PartnerDashboard({
   bonusBalance: number
 }) {
   const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
+  const { newRequestOpen, setNewRequestOpen } = usePartnerUi()
   const [loading, setLoading] = useState(false)
   const [sqmChoice, setSqmChoice] = useState<string>('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -98,7 +99,7 @@ export function PartnerDashboard({
       })
 
       if (res.ok) {
-        setIsOpen(false)
+        setNewRequestOpen(false)
         setCustomerPhone('')
         router.refresh()
       }
@@ -115,9 +116,9 @@ export function PartnerDashboard({
           <p className="text-sm text-muted-foreground sm:text-base">Создавайте заявки на расходы</p>
         </div>
         <Drawer
-          open={isOpen}
+          open={newRequestOpen}
           onOpenChange={(open) => {
-            setIsOpen(open)
+            setNewRequestOpen(open)
             if (open) {
               setSqmChoice('')
               setCustomerPhone('')
@@ -128,7 +129,7 @@ export function PartnerDashboard({
           repositionInputs={false}
         >
           <DrawerTrigger asChild>
-            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+            <Button className="hidden h-11 gap-2 md:inline-flex md:h-10">
               <Plus className="h-4 w-4 shrink-0" />
               Новая заявка
             </Button>
@@ -301,7 +302,7 @@ export function PartnerDashboard({
         </Card>
       </div>
 
-      <Card className="border-border bg-card">
+      <Card id="partner-requests-history" className="scroll-mt-4 border-border bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />

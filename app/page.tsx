@@ -14,7 +14,9 @@ export default async function HomePage() {
   }
   
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
+    <main
+      className="flex min-h-dvh min-h-[100dvh] items-center justify-center px-4 py-8 pt-[max(2rem,env(safe-area-inset-top,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))]"
+    >
       <LoginForm />
     </main>
   )

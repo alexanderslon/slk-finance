@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { AdminSidebar } from '@/components/admin-sidebar'
+import { AdminMobileNav } from '@/components/admin-mobile-nav'
 import { sql } from '@/lib/db'
 
 export default async function AdminLayout({
@@ -24,9 +25,10 @@ export default async function AdminLayout({
   return (
     <div className="flex min-h-dvh min-h-[100dvh] bg-background">
       <AdminSidebar username={user.username} pendingRequests={pendingRequests} />
-      <main className="flex min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-14 sm:px-5 sm:py-5 md:px-6 md:py-6 md:pt-6">
+      <main className="flex min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] pt-14 sm:px-5 sm:py-5 md:px-6 md:py-6 md:pt-6 md:pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
         {children}
       </main>
+      <AdminMobileNav pendingRequests={pendingRequests} />
     </div>
   )
 }
