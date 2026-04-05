@@ -36,6 +36,9 @@ export function formatRuPhoneInput(raw: string): string {
   return s
 }
 
+/** Стартовое значение поля: уже видно +7 и «(» под код оператора. */
+export const RU_PHONE_FIELD_PREFIX = formatRuPhoneInput('7')
+
 export function ruPhoneDigits(formatted: string): string {
   return formatted.replace(/\D/g, '')
 }

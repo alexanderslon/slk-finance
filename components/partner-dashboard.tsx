@@ -25,7 +25,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { RuPhoneField } from '@/components/ru-phone-field'
-import { isCompleteRuMobile, ruPhoneDigits, formatCustomerPhoneDisplay } from '@/lib/phone-format'
+import {
+  isCompleteRuMobile,
+  ruPhoneDigits,
+  formatCustomerPhoneDisplay,
+  RU_PHONE_FIELD_PREFIX,
+} from '@/lib/phone-format'
 import { Plus, FileText, Check, X, Clock, Sparkles } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -66,7 +71,7 @@ export function PartnerDashboard({
   const { newRequestOpen, setNewRequestOpen } = usePartnerUi()
   const [loading, setLoading] = useState(false)
   const [sqmChoice, setSqmChoice] = useState<string>('')
-  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerPhone, setCustomerPhone] = useState(RU_PHONE_FIELD_PREFIX)
   const [phoneError, setPhoneError] = useState('')
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length
@@ -100,7 +105,7 @@ export function PartnerDashboard({
 
       if (res.ok) {
         setNewRequestOpen(false)
-        setCustomerPhone('')
+        setCustomerPhone(RU_PHONE_FIELD_PREFIX)
         router.refresh()
       }
     } finally {
@@ -123,7 +128,7 @@ export function PartnerDashboard({
             setNewRequestOpen(open)
             if (open) {
               setSqmChoice('')
-              setCustomerPhone('')
+              setCustomerPhone(RU_PHONE_FIELD_PREFIX)
               setPhoneError('')
             }
           }}
