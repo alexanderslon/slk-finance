@@ -13,8 +13,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'SLK Finance - Учет финансов',
-  description: 'Приложение для учета доходов и расходов',
+  title: 'Sarafan — учёт финансов',
+  description: 'Sarafan: учёт доходов и расходов',
   generator: 'v0.app',
   icons: {
     icon: [

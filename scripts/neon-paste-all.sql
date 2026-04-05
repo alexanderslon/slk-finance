@@ -1,12 +1,12 @@
 -- =============================================================================
--- SLK Finance — один раз вставьте ВЕСЬ этот файл в Neon → SQL Editor → Run
+-- Sarafan — один раз вставьте ВЕСЬ этот файл в Neon → SQL Editor → Run
 -- (содержимое файла, а не путь scripts/...)
 -- Порядок: схема → сиды → выравнивание → legacy-пароли (только если есть колонка password) → фиксы партнёра → квадратура
 -- =============================================================================
 
 -- --- 001-create-tables.sql --------------------------------------------------
 
--- SLK Finance schema (matches the app code)
+-- Sarafan schema (matches the app code)
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS goals (
 
 -- --- 002-seed-data.sql ------------------------------------------------------
 
--- Seed data for SLK Finance
+-- Seed data for Sarafan
 
 -- Admin user (login: slk, password: 31337)
 INSERT INTO users (username, password_hash, role, status) 

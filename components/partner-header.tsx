@@ -30,7 +30,7 @@ export function PartnerHeader({
             <Wallet className="h-4 w-4 text-primary-foreground sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold sm:text-lg">SLK Finance</h1>
+            <h1 className="truncate text-base font-semibold sm:text-lg">Sarafan</h1>
             <p className="truncate text-xs text-muted-foreground sm:text-sm">{partnerName}</p>
           </div>
         </div>

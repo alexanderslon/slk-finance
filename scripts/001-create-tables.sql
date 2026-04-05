@@ -1,4 +1,4 @@
--- SLK Finance schema (matches the app code)
+-- Sarafan schema (matches the app code)
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,

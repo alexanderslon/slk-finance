@@ -66,7 +66,7 @@ export function AdminSidebar({
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Wallet className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold text-sidebar-foreground">SLK Finance</span>
+          <span className="text-lg font-semibold text-sidebar-foreground">Sarafan</span>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:p-4">

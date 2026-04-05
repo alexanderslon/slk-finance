@@ -91,7 +91,7 @@ export function LoginForm() {
         <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary sm:mb-4 sm:h-16 sm:w-16">
           <Wallet className="h-7 w-7 text-primary-foreground sm:h-8 sm:w-8" />
         </div>
-        <CardTitle className="text-xl font-bold sm:text-2xl">SLK Finance</CardTitle>
+        <CardTitle className="text-xl font-bold sm:text-2xl">Sarafan</CardTitle>
         <CardDescription className="text-sm sm:text-base">Система учета доходов и расходов</CardDescription>
       </CardHeader>
       <CardContent className="px-4 pb-6 sm:px-6">

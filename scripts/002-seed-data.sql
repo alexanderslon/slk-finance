@@ -1,4 +1,4 @@
--- Seed data for SLK Finance
+-- Seed data for Sarafan
 
 -- Admin user (login: slk, password: 31337)
 INSERT INTO users (username, password_hash, role, status) 
