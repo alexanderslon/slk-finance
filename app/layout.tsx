@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Sarafan — учёт финансов',
-  description: 'Sarafan: учёт доходов и расходов',
+  description: 'Sarafan — где люди и партнёры находят друг друга',
   generator: 'v0.app',
   icons: {
     icon: [
