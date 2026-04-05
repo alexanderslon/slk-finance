@@ -92,9 +92,7 @@ export function LoginForm() {
           <Wallet className="h-7 w-7 text-primary-foreground sm:h-8 sm:w-8" />
         </div>
         <CardTitle className="text-xl font-bold sm:text-2xl">Sarafan</CardTitle>
-        <CardDescription className="text-sm sm:text-base">
-          Где люди и партнёры находят друг друга
-        </CardDescription>
+        <CardDescription className="text-sm sm:text-base">От человека — к человеку</CardDescription>
       </CardHeader>
       <CardContent className="px-4 pb-6 sm:px-6">
         {showRegister ? (
