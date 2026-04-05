@@ -22,9 +22,9 @@ export default async function AdminLayout({
   const pendingRequests = Number(pendingRows[0]?.count ?? 0)
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh min-h-[100dvh] bg-background">
       <AdminSidebar username={user.username} pendingRequests={pendingRequests} />
-      <main className="flex-1 overflow-auto p-6">
+      <main className="flex min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-14 sm:px-5 sm:py-5 md:px-6 md:py-6 md:pt-6">
         {children}
       </main>
     </div>

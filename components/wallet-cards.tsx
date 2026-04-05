@@ -22,13 +22,13 @@ function formatCurrency(amount: number, currency: string = 'RUB') {
 export function WalletCards({ wallets }: { wallets: Wallet[] }) {
   return (
     <Card className="border-border bg-card">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          <WalletIcon className="h-5 w-5" />
+      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <WalletIcon className="h-5 w-5 shrink-0" />
           Кошельки
         </CardTitle>
-        <Link href="/admin/wallets">
-          <Button variant="outline" size="sm" className="gap-2">
+        <Link href="/admin/wallets" className="shrink-0 sm:ml-auto">
+          <Button variant="outline" size="sm" className="h-10 w-full gap-2 sm:h-9 sm:w-auto">
             <Plus className="h-4 w-4" />
             Добавить
           </Button>
@@ -42,18 +42,18 @@ export function WalletCards({ wallets }: { wallets: Wallet[] }) {
             {wallets.map((wallet) => (
               <div
                 key={wallet.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-4"
+                className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/30 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                     <WalletIcon className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="font-medium">{wallet.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{wallet.name}</p>
                     <p className="text-sm text-muted-foreground">{wallet.currency}</p>
                   </div>
                 </div>
-                <p className="text-lg font-semibold">
+                <p className="shrink-0 text-right text-base font-semibold tabular-nums sm:text-lg">
                   {formatCurrency(Number(wallet.balance), wallet.currency)}
                 </p>
               </div>

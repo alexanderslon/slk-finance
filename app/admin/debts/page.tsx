@@ -9,10 +9,10 @@ export default async function DebtsPage() {
   const debts = await getDebts()
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Долги</h1>
-        <p className="text-muted-foreground">Учет долгов: кому дали и у кого взяли</p>
+    <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl font-bold leading-tight sm:text-2xl">Долги</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">Учет долгов: кому дали и у кого взяли</p>
       </div>
 
       <DebtsManager initialDebts={debts} />

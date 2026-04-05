@@ -200,8 +200,8 @@ export function RequestsManager({
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center gap-4 mb-6">
-        <Badge variant="outline" className="text-lg px-4 py-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-4">
+        <Badge variant="outline" className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-lg">
           Ожидают: {pendingCount}
         </Badge>
       </div>
@@ -224,20 +224,20 @@ export function RequestsManager({
                 return (
                   <div
                     key={request.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-4"
+                    className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/30 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${config.color.split(' ')[0]}`}>
+                    <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.color.split(' ')[0]}`}>
                         <StatusIcon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium">{request.partner_name}</p>
                           <Badge variant="outline" className={config.color}>
                             {config.label}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="break-words text-sm text-muted-foreground">
                           {request.category_name}
                           {request.customer_phone &&
                             ` · ${formatCustomerPhoneDisplay(request.customer_phone)}`}
@@ -252,25 +252,27 @@ export function RequestsManager({
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <p className="text-lg font-semibold">
+                    <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4 sm:border-0 sm:pt-0">
+                      <p className="text-base font-semibold tabular-nums sm:text-lg sm:text-right">
                         {formatCurrency(Number(request.amount))}
                       </p>
                       {request.status === 'pending' && (
-                        <div className="flex gap-2">
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-2">
                           <Button
                             size="sm"
+                            className="h-10 w-full sm:h-9 sm:w-auto"
                             onClick={() => {
                               setSelectedRequest(request)
                               setActionType('approve')
                             }}
                           >
-                            <Check className="h-4 w-4 mr-1" />
+                            <Check className="mr-1 h-4 w-4" />
                             Одобрить
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
+                            className="h-10 w-full sm:h-9 sm:w-auto"
                             onClick={() => {
                               setSelectedRequest(request)
                               setActionType('reject')
@@ -282,7 +284,7 @@ export function RequestsManager({
                         </div>
                       )}
                       {request.admin_comment && (
-                        <p className="text-sm text-muted-foreground max-w-[200px] truncate">
+                        <p className="max-w-full truncate text-sm text-muted-foreground sm:max-w-[200px]">
                           {request.admin_comment}
                         </p>
                       )}

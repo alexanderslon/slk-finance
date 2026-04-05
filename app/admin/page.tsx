@@ -89,10 +89,10 @@ export default async function AdminDashboard() {
   const { wallets, transactions, goals, dashboard } = await getDashboardData()
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Дашборд</h1>
-        <p className="text-muted-foreground">Общая статистика финансов</p>
+    <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl font-bold leading-tight sm:text-2xl">Дашборд</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">Общая статистика финансов</p>
       </div>
 
       <DashboardStats
@@ -106,7 +106,7 @@ export default async function AdminDashboard() {
         initialExpenses={dashboard.initialExpenses}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <WalletCards wallets={wallets} />
         <GoalProgress goals={goals} />
       </div>

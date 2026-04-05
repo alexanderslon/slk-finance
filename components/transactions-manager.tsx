@@ -173,7 +173,7 @@ export function TransactionsManager({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-10 w-10 sm:h-8 sm:w-8"
               onClick={() => {
                 setEditTransaction(t)
                 setIsOpen(true)
@@ -184,7 +184,7 @@ export function TransactionsManager({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
+              className="h-10 w-10 text-destructive hover:text-destructive sm:h-8 sm:w-8"
               onClick={() => handleDelete(t.id)}
             >
               <Trash2 className="h-4 w-4" />
@@ -198,12 +198,15 @@ export function TransactionsManager({
   return (
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <Label htmlFor="month-filter" className="text-muted-foreground whitespace-nowrap">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <Label htmlFor="month-filter" className="shrink-0 text-sm text-muted-foreground sm:whitespace-nowrap">
             Период
           </Label>
           <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger id="month-filter" className="w-[min(100%,280px)]">
+            <SelectTrigger
+              id="month-filter"
+              className="h-11 w-full text-base sm:h-10 sm:w-[min(100%,280px)] sm:text-sm"
+            >
               <SelectValue placeholder="Месяц" />
             </SelectTrigger>
             <SelectContent>
@@ -215,19 +218,19 @@ export function TransactionsManager({
               ))}
             </SelectContent>
           </Select>
-          <span className={`text-sm font-semibold tabular-nums ${colorClass}`}>
+          <span className={`text-sm font-semibold tabular-nums sm:text-base ${colorClass}`}>
             {monthFilter === 'all' ? 'Всего' : 'За месяц'}: {type === 'income' ? '+' : '-'}
             {formatCurrency(periodTotal)}
           </span>
         </div>
-        <div className="flex justify-end sm:justify-end">
+        <div className="flex w-full justify-stretch sm:w-auto sm:justify-end">
         <Dialog open={isOpen} onOpenChange={(open) => {
           setIsOpen(open)
           if (!open) setEditTransaction(null)
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+              <Plus className="h-4 w-4 shrink-0" />
               Добавить {type === 'income' ? 'доход' : 'расход'}
             </Button>
           </DialogTrigger>
@@ -294,7 +297,7 @@ export function TransactionsManager({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="partner_id">Партнер</Label>
                   <Select
@@ -360,13 +363,13 @@ export function TransactionsManager({
               Нет операций за выбранный месяц
             </p>
           ) : (
-            <div className="space-y-8 overflow-x-auto">
+            <div className="space-y-6 sm:space-y-8">
               {groupedByMonth.map(([key, rows]) => {
                 const blockTotal = rows.reduce((s, t) => s + Number(t.amount), 0)
                 return (
-                  <div key={key}>
-                    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
-                      <h3 className="text-base font-semibold capitalize text-foreground">
+                  <div key={key} className="min-w-0">
+                    <div className="mb-3 flex flex-col gap-1 border-b border-border pb-2 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-2">
+                      <h3 className="text-base font-semibold text-foreground">
                         {transactionMonthTitleRu(key)}
                       </h3>
                       <span className={`text-sm font-medium tabular-nums ${colorClass}`}>
@@ -374,7 +377,8 @@ export function TransactionsManager({
                         {formatCurrency(blockTotal)}
                       </span>
                     </div>
-                    <Table>
+                    <div className="rounded-md border border-border">
+                    <Table className="min-w-[720px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Дата</TableHead>
@@ -388,6 +392,7 @@ export function TransactionsManager({
                       </TableHeader>
                       <TableBody>{renderTableRows(rows)}</TableBody>
                     </Table>
+                    </div>
                   </div>
                 )
               })}

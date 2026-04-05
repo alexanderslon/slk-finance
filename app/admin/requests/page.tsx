@@ -23,10 +23,10 @@ export default async function RequestsPage() {
   const pendingCount = requests.filter((r: { status: string }) => r.status === 'pending').length
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Заявки от партнеров</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl font-bold leading-tight sm:text-2xl">Заявки от партнеров</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Обработка заявок на расходы · Новые: {pendingCount}
         </p>
       </div>

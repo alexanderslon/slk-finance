@@ -89,11 +89,11 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex justify-stretch sm:justify-end">
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+              <Plus className="h-4 w-4 shrink-0" />
               Добавить кошелек
             </Button>
           </DialogTrigger>
@@ -158,7 +158,7 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-10 w-10 sm:h-8 sm:w-8"
                   onClick={() => {
                     setEditWallet(wallet)
                     setIsOpen(true)
@@ -169,7 +169,7 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  className="h-10 w-10 text-destructive hover:text-destructive sm:h-8 sm:w-8"
                   onClick={() => handleDelete(wallet.id)}
                 >
                   <Trash2 className="h-4 w-4" />

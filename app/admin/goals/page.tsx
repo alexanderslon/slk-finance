@@ -9,10 +9,10 @@ export default async function GoalsPage() {
   const goals = await getGoals()
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Цели</h1>
-        <p className="text-muted-foreground">Финансовые цели и накопления</p>
+    <div className="space-y-5 sm:space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-xl font-bold leading-tight sm:text-2xl">Цели</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">Финансовые цели и накопления</p>
       </div>
 
       <GoalsManager initialGoals={goals} />
