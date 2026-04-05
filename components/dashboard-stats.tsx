@@ -91,16 +91,18 @@ export function DashboardStats({
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="space-y-2 max-lg:space-y-2 sm:space-y-4 lg:space-y-4">
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold leading-tight sm:text-2xl">Дашборд</h1>
-          <p className="mt-0.5 hidden text-sm text-muted-foreground md:block">
+          <h1 className="text-lg font-bold leading-tight max-lg:tracking-tight sm:text-xl lg:text-2xl">
+            Дашборд
+          </h1>
+          <p className="mt-0.5 hidden text-sm text-muted-foreground lg:block">
             Общая статистика финансов
           </p>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
           <div className="flex items-center gap-2">
             <Sheet open={monthSheetOpen} onOpenChange={setMonthSheetOpen}>
               <SheetTrigger asChild>
@@ -108,12 +110,12 @@ export function DashboardStats({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-11 gap-1.5 px-3 text-sm font-medium md:hidden"
+                  className="h-11 gap-1 px-2.5 text-sm font-medium lg:hidden"
                   disabled={loading || monthOptions.length === 0}
                   aria-label="Выбрать месяц для доходов и расходов"
                 >
                   Месяц
-                  <ChevronDown className="h-4 w-4 opacity-70" />
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
                 </Button>
               </SheetTrigger>
               <SheetContent
@@ -162,7 +164,7 @@ export function DashboardStats({
               </SheetContent>
             </Sheet>
 
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden items-center gap-2 lg:flex">
               <Label
                 htmlFor="dashboard-month"
                 className="shrink-0 whitespace-nowrap text-sm text-muted-foreground"
