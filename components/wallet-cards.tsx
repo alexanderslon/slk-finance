@@ -4,29 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Wallet as WalletIcon, Plus } from 'lucide-react'
 import Link from 'next/link'
 import type { Wallet } from '@/lib/db'
-
-/** Всегда внизу блока «Кошельки» на дашборде, в этом порядке (остальные — выше, порядок как в БД). */
-const DASHBOARD_PINNED_WALLET_NAMES = [
-  'На будущее',
-  'На развитие',
-  'Благотворительность',
-] as const
-
-function sortWalletsForDashboard(wallets: Wallet[]): Wallet[] {
-  const orderIndex = new Map<string, number>(
-    DASHBOARD_PINNED_WALLET_NAMES.map((name, i) => [name.trim().toLowerCase(), i]),
-  )
-  const rest: Wallet[] = []
-  const pinned: { wallet: Wallet; idx: number }[] = []
-  for (const w of wallets) {
-    const key = w.name.trim().toLowerCase()
-    const idx = orderIndex.get(key)
-    if (idx !== undefined) pinned.push({ wallet: w, idx })
-    else rest.push(w)
-  }
-  pinned.sort((a, b) => a.idx - b.idx)
-  return [...rest, ...pinned.map((p) => p.wallet)]
-}
+import { sortWalletsWithPinnedBottom } from '@/lib/wallet-order'
 
 function formatCurrency(amount: number, currency: string = 'RUB') {
   const currencyMap: Record<string, string> = {
@@ -63,7 +41,7 @@ function WalletRow({ wallet }: { wallet: Wallet }) {
 }
 
 export function WalletCards({ wallets }: { wallets: Wallet[] }) {
-  const orderedWallets = sortWalletsForDashboard(wallets)
+  const orderedWallets = sortWalletsWithPinnedBottom(wallets)
 
   const body =
     orderedWallets.length === 0 ? (

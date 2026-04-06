@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Wallet, Plus, Pencil, Trash2 } from 'lucide-react'
 import type { Wallet as WalletType } from '@/lib/db'
+import { sortWalletsWithPinnedBottom } from '@/lib/wallet-order'
 
 function formatCurrency(amount: number, currency: string = 'RUB') {
   const currencyMap: Record<string, string> = {
@@ -80,6 +81,11 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
   const [isOpen, setIsOpen] = useState(false)
   const [editWallet, setEditWallet] = useState<WalletType | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const orderedWallets = useMemo(
+    () => sortWalletsWithPinnedBottom(wallets),
+    [wallets],
+  )
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -199,7 +205,7 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
         </Dialog>
       </div>
 
-      {wallets.length === 0 ? (
+      {orderedWallets.length === 0 ? (
         <Card className="rounded-2xl border-border bg-card shadow-sm sm:rounded-3xl">
           <CardContent className="flex flex-col items-center justify-center px-4 py-12 sm:px-6">
             <Wallet className="mb-4 h-12 w-12 text-muted-foreground" />
@@ -210,7 +216,7 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
       ) : (
         <>
           <div className="space-y-3 sm:hidden">
-            {wallets.map((wallet) => (
+            {orderedWallets.map((wallet) => (
               <div
                 key={wallet.id}
                 className="overflow-hidden rounded-2xl border border-border bg-secondary/30 shadow-sm"
@@ -251,19 +257,20 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
             ))}
           </div>
 
-          <div className="hidden gap-4 sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
-            {wallets.map((wallet) => (
+          <div className="hidden gap-5 sm:grid sm:grid-cols-1 md:grid-cols-2 md:gap-6 2xl:grid-cols-3 2xl:gap-6">
+            {orderedWallets.map((wallet) => (
               <Card
                 key={wallet.id}
-                className="gap-0 overflow-hidden rounded-3xl border-border bg-card py-0 shadow-sm"
+                className="min-w-0 gap-0 overflow-hidden rounded-3xl border-border bg-card py-0 shadow-sm"
               >
                 <CardHeader className="flex flex-row items-start justify-between gap-3 px-5 pb-3 pt-5 sm:px-6 sm:pb-3 sm:pt-6">
                   <div className="min-w-0 flex-1 pr-1">
                     <CardTitle
                       lang="ru"
-                      className="whitespace-normal text-base font-bold leading-snug text-foreground md:text-lg"
+                      title={wallet.name}
+                      className="truncate text-base font-bold leading-tight text-foreground md:text-lg"
                     >
-                      <span className="wrap-break-word hyphens-auto">{wallet.name}</span>
+                      {wallet.name}
                     </CardTitle>
                     {wallet.currency && wallet.currency !== 'RUB' ? (
                       <p className="mt-1 text-xs text-muted-foreground wrap-break-word">
