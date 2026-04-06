@@ -49,8 +49,10 @@ export function WalletCards({ wallets }: { wallets: Wallet[] }) {
                     <WalletIcon className="h-5 w-5 text-primary" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{wallet.name}</p>
-                    <p className="text-sm text-muted-foreground">{wallet.currency}</p>
+                    <p className="truncate text-base font-bold leading-snug sm:text-lg">{wallet.name}</p>
+                    {wallet.currency && wallet.currency !== 'RUB' ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{wallet.currency}</p>
+                    ) : null}
                   </div>
                 </div>
                 <p className="shrink-0 text-right text-base font-semibold tabular-nums sm:text-lg">
