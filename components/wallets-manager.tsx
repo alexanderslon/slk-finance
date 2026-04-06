@@ -150,10 +150,15 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {wallets.map((wallet) => (
           <Card key={wallet.id} className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {wallet.currency}
-              </CardTitle>
+            <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+              <div className="min-w-0 pr-2">
+                <CardTitle className="text-base font-bold leading-snug text-foreground sm:text-lg">
+                  {wallet.name}
+                </CardTitle>
+                {wallet.currency && wallet.currency !== 'RUB' ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{wallet.currency}</p>
+                ) : null}
+              </div>
               <div className="flex gap-1">
                 <Button
                   variant="ghost"
@@ -185,7 +190,6 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
                   <p className="text-xl font-bold">
                     {formatCurrency(Number(wallet.balance), wallet.currency)}
                   </p>
-                  <p className="text-sm text-muted-foreground">{wallet.name}</p>
                 </div>
               </div>
             </CardContent>
