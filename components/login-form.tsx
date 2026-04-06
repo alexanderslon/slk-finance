@@ -86,19 +86,24 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-md border-border bg-card shadow-lg">
-      <CardHeader className="space-y-2 px-4 pb-2 pt-6 text-center sm:px-6">
-        <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary sm:mb-4 sm:h-16 sm:w-16">
-          <Wallet className="h-7 w-7 text-primary-foreground sm:h-8 sm:w-8" />
+    <Card className="mx-auto w-full max-w-lg rounded-3xl border-border bg-card shadow-xl">
+      <CardHeader className="space-y-3 px-5 pb-2 pt-8 text-center sm:space-y-4 sm:px-8 sm:pt-10">
+        <div className="mx-auto mb-1 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary shadow-lg sm:mb-2 sm:h-24 sm:w-24">
+          <Wallet className="h-10 w-10 text-primary-foreground sm:h-11 sm:w-11" />
         </div>
-        <CardTitle className="text-xl font-bold sm:text-2xl">Sarafan</CardTitle>
-        <CardDescription className="text-sm sm:text-base">От человека — к человеку</CardDescription>
+        <CardTitle className="text-4xl font-bold tracking-tight sm:text-5xl">Sarafan</CardTitle>
+        <CardDescription className="text-lg text-muted-foreground sm:text-xl sm:leading-snug">
+          От человека — к человеку
+        </CardDescription>
+        <p className="mx-auto max-w-md pt-1 text-center text-base leading-relaxed text-muted-foreground sm:text-lg">
+          Мы соединяем тех, кто ищет работу или услуги, с теми, кто может их качественно выполнить.
+        </p>
       </CardHeader>
-      <CardContent className="px-4 pb-6 sm:px-6">
+      <CardContent className="px-5 pb-8 sm:px-8">
         {showRegister ? (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 rounded-3xl border border-border bg-secondary/25 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold sm:text-lg">Регистрация партнёра</h3>
+              <h3 className="text-lg font-semibold sm:text-xl">Регистрация партнёра</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -144,19 +149,19 @@ export function LoginForm() {
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               {success && <p className="text-sm text-primary">{success}</p>}
-              <Button type="submit" className="w-full" disabled={loading}>
-                <UserPlus className="mr-2 h-4 w-4" />
+              <Button type="submit" className="h-12 w-full text-base font-semibold sm:h-11" disabled={loading}>
+                <UserPlus className="mr-2 h-4 w-4 shrink-0" />
                 {loading ? 'Регистрация...' : 'Зарегистрироваться'}
               </Button>
             </form>
           </div>
         ) : (
-          <div className="w-full space-y-4 sm:space-y-5">
+          <div className="w-full space-y-6 sm:space-y-8">
             <div>
-              <p className="mb-2 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground sm:mb-3 sm:text-sm sm:normal-case sm:tracking-normal">
+              <p className="mb-3 text-center text-sm text-muted-foreground sm:mb-4 sm:text-base">
                 Как вы заходите?
               </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -164,23 +169,25 @@ export function LoginForm() {
                     setError('')
                   }}
                   className={cn(
-                    'order-2 flex min-h-[4.5rem] flex-row items-center gap-3 rounded-xl border-2 p-3 text-left transition-all sm:order-1 sm:min-h-[5.5rem] sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:p-4 sm:text-center',
+                    'order-2 flex min-h-[4.75rem] flex-row items-center gap-3 rounded-3xl border-2 p-4 text-left transition-all sm:order-1 sm:min-h-0 sm:flex-col sm:items-center sm:justify-center sm:gap-3 sm:p-6 sm:text-center',
                     loginRole === 'admin'
-                      ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/25'
-                      : 'border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40',
+                      ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
+                      : 'border-border bg-secondary/30 hover:border-primary/50 hover:bg-secondary/50',
                   )}
                 >
                   <div
                     className={cn(
-                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12',
-                      loginRole === 'admin' ? 'bg-primary text-primary-foreground' : 'bg-background text-primary',
+                      'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14',
+                      loginRole === 'admin'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-primary',
                     )}
                   >
-                    <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7" />
                   </div>
                   <div className="min-w-0 flex-1 sm:flex-none">
-                    <span className="block text-base font-semibold leading-tight">Админ</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground sm:mt-1">
+                    <span className="block text-lg font-semibold leading-tight sm:text-xl">Админ</span>
+                    <span className="mt-1 block text-sm text-muted-foreground">
                       Учёт, кошельки, заявки
                     </span>
                   </div>
@@ -192,23 +199,25 @@ export function LoginForm() {
                     setError('')
                   }}
                   className={cn(
-                    'order-1 flex min-h-[4.5rem] flex-row items-center gap-3 rounded-xl border-2 p-3 text-left transition-all sm:order-2 sm:min-h-[5.5rem] sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:p-4 sm:text-center',
+                    'order-1 flex min-h-[4.75rem] flex-row items-center gap-3 rounded-3xl border-2 p-4 text-left transition-all sm:order-2 sm:min-h-0 sm:flex-col sm:items-center sm:justify-center sm:gap-3 sm:p-6 sm:text-center',
                     loginRole === 'partner'
-                      ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/25'
-                      : 'border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40',
+                      ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
+                      : 'border-border bg-secondary/30 hover:border-primary/50 hover:bg-secondary/50',
                   )}
                 >
                   <div
                     className={cn(
-                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12',
-                      loginRole === 'partner' ? 'bg-primary text-primary-foreground' : 'bg-background text-primary',
+                      'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14',
+                      loginRole === 'partner'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-primary',
                     )}
                   >
-                    <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <Users className="h-6 w-6 sm:h-7 sm:w-7" />
                   </div>
                   <div className="min-w-0 flex-1 sm:flex-none">
-                    <span className="block text-base font-semibold leading-tight">Партнёр</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground sm:mt-1">
+                    <span className="block text-lg font-semibold leading-tight sm:text-xl">Партнёр</span>
+                    <span className="mt-1 block text-sm text-muted-foreground">
                       Бонусы и заявки
                     </span>
                   </div>
@@ -217,7 +226,10 @@ export function LoginForm() {
             </div>
 
             {loginRole === 'admin' ? (
-              <form onSubmit={(e) => handleSubmit(e, 'admin')} className="flex flex-col gap-4 border-t border-border pt-4 sm:pt-5">
+              <form
+                onSubmit={(e) => handleSubmit(e, 'admin')}
+                className="flex flex-col gap-4 rounded-3xl border border-border bg-secondary/25 p-5 sm:gap-5 sm:p-6"
+              >
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="admin-username">Логин</Label>
                   <Input
@@ -241,12 +253,15 @@ export function LoginForm() {
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 {success && <p className="text-sm text-primary">{success}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="h-12 w-full text-base font-semibold sm:h-11" disabled={loading}>
                   {loading ? 'Вход...' : 'Войти как админ'}
                 </Button>
               </form>
             ) : (
-              <form onSubmit={(e) => handleSubmit(e, 'partner')} className="flex flex-col gap-4 border-t border-border pt-4 sm:pt-5">
+              <form
+                onSubmit={(e) => handleSubmit(e, 'partner')}
+                className="flex flex-col gap-4 rounded-3xl border border-border bg-secondary/25 p-5 sm:gap-5 sm:p-6"
+              >
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="partner-username">Телефон</Label>
                   <RuPhoneField
@@ -270,7 +285,7 @@ export function LoginForm() {
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 {success && <p className="text-sm text-primary">{success}</p>}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="h-12 w-full text-base font-semibold sm:h-11" disabled={loading}>
                   {loading ? 'Вход...' : 'Войти как партнёр'}
                 </Button>
                 <div className="relative my-1">
@@ -278,15 +293,26 @@ export function LoginForm() {
                     <span className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">или</span>
+                    <span className="bg-secondary/25 px-2 text-muted-foreground">или</span>
                   </div>
                 </div>
-                <Button type="button" variant="outline" className="w-full" onClick={() => setShowRegister(true)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Зарегистрироваться
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full text-base sm:h-11"
+                  onClick={() => setShowRegister(true)}
+                >
+                  <UserPlus className="mr-2 h-4 w-4 shrink-0" />
+                  Стать партнёром
                 </Button>
               </form>
             )}
+
+            {loginRole === 'admin' ? (
+              <p className="text-center text-sm text-muted-foreground">
+                Нужен вход как партнёр? Переключитесь на «Партнёр» — там же регистрация.
+              </p>
+            ) : null}
           </div>
         )}
       </CardContent>
