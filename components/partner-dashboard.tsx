@@ -153,7 +153,7 @@ export function PartnerDashboard({
             <DrawerHeader className="shrink-0 space-y-1 border-b border-border px-4 pb-3 pt-1 text-left sm:pt-0">
               <DrawerTitle className="text-lg leading-snug">Заявка на установку сантехники</DrawerTitle>
               <DrawerDescription className="sr-only">
-                Укажите телефон заказчика и при необходимости адрес и комментарий
+                Укажите телефон заказчика и при необходимости адрес, квадратуру и перечень работ по объекту
               </DrawerDescription>
             </DrawerHeader>
             <form
@@ -243,12 +243,12 @@ export function PartnerDashboard({
 
                   <div className={partnerRequestFieldClass}>
                     <Label htmlFor="work_comment" className="font-medium">
-                      Комментарий (что нужно сделать)
+                      Комментарий по объекту
                     </Label>
                     <Textarea
                       id="work_comment"
                       name="work_comment"
-                      placeholder="Например: установить унитаз/смеситель, заменить трубы..."
+                      placeholder="Например: ремонт квартиры под ключ, установка ограждения, установка сантехники, замена водопровода"
                       className={cn(
                         'min-h-[100px] text-base sm:text-sm',
                         partnerRequestControlClass,
