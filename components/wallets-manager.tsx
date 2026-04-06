@@ -147,50 +147,62 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
         </Dialog>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {wallets.map((wallet) => (
-          <Card key={wallet.id} className="border-border bg-card">
-            <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
-              <div className="min-w-0 pr-2">
-                <CardTitle className="text-base font-bold leading-snug text-foreground sm:text-lg">
-                  {wallet.name}
+          <Card
+            key={wallet.id}
+            className="border-border bg-card overflow-hidden"
+          >
+            <CardHeader className="flex flex-row items-start justify-between gap-2 px-4 pb-2 pt-5 sm:gap-3 sm:px-6 sm:pt-6">
+              <div className="min-w-0 flex-1 pr-1 sm:pr-2">
+                <CardTitle
+                  lang="ru"
+                  className="whitespace-normal text-sm font-bold leading-snug text-foreground sm:text-base md:text-lg"
+                >
+                  <span className="wrap-break-word hyphens-auto">
+                    {wallet.name}
+                  </span>
                 </CardTitle>
                 {wallet.currency && wallet.currency !== 'RUB' ? (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{wallet.currency}</p>
+                  <p className="mt-1 text-xs text-muted-foreground wrap-break-word">
+                    {wallet.currency}
+                  </p>
                 ) : null}
               </div>
-              <div className="flex gap-1">
+              <div className="flex shrink-0 gap-0.5 self-start sm:gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 sm:h-8 sm:w-8"
+                  type="button"
+                  className="h-11 w-11 touch-manipulation sm:h-9 sm:w-9 md:h-8 md:w-8"
                   onClick={() => {
                     setEditWallet(wallet)
                     setIsOpen(true)
                   }}
+                  aria-label="Редактировать кошелёк"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-4 w-4 shrink-0" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 text-destructive hover:text-destructive sm:h-8 sm:w-8"
+                  type="button"
+                  className="h-11 w-11 touch-manipulation text-destructive hover:text-destructive sm:h-9 sm:w-9 md:h-8 md:w-8"
                   onClick={() => handleDelete(wallet.id)}
+                  aria-label="Удалить кошелёк"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 shrink-0" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <Wallet className="h-6 w-6 text-primary" />
+            <CardContent className="px-4 pb-5 pt-0 sm:px-6 sm:pb-6">
+              <div className="flex min-w-0 items-center gap-3 sm:gap-3.5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 sm:h-12 sm:w-12">
+                  <Wallet className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
                 </div>
-                <div>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(Number(wallet.balance), wallet.currency)}
-                  </p>
-                </div>
+                <p className="min-w-0 text-lg font-bold tabular-nums leading-tight sm:text-xl">
+                  {formatCurrency(Number(wallet.balance), wallet.currency)}
+                </p>
               </div>
             </CardContent>
           </Card>
