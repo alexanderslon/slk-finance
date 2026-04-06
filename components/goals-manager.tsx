@@ -201,15 +201,106 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Mobile-first: как «Долги» — полноширинные карточки-строки */}
+      <div className="space-y-3 sm:hidden">
         {goals.map((goal) => {
           const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100
           const isComplete = progress >= 100
           return (
-            <Card
+            <div
               key={goal.id}
-              className="rounded-3xl border-border bg-card"
+              className="rounded-2xl border border-border bg-secondary/30 p-4"
             >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${isComplete ? 'bg-success/10' : 'bg-primary/10'}`}
+                    aria-hidden
+                  >
+                    <Target className={`h-5 w-5 ${isComplete ? 'text-success' : 'text-primary'}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 font-medium leading-snug">{goal.name}</p>
+                    {goal.deadline ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        До {format(new Date(goal.deadline), 'd MMM yyyy', { locale: ru })}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => {
+                      setEditGoal(goal)
+                      setIsOpen(true)
+                    }}
+                    aria-label="Редактировать"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(goal.id)}
+                    aria-label="Удалить"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <p className="text-xl font-bold tabular-nums">
+                  {formatCurrency(Number(goal.current_amount))}
+                </p>
+                <p className={`text-sm font-semibold tabular-nums ${isComplete ? 'text-success' : 'text-muted-foreground'}`}>
+                  {Math.round(progress)}%
+                </p>
+              </div>
+
+              <div className="mt-2 space-y-1.5">
+                <Progress value={Math.min(progress, 100)} className="h-2" />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{formatCurrency(Number(goal.current_amount))}</span>
+                  <span>{formatCurrency(Number(goal.target_amount))}</span>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                {!isComplete ? (
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full gap-2"
+                    onClick={() => {
+                      setSelectedGoal(goal)
+                      setAddMoneyOpen(true)
+                    }}
+                  >
+                    <PiggyBank className="h-4 w-4" />
+                    Пополнить
+                  </Button>
+                ) : (
+                  <div className="rounded-xl bg-success/10 px-3 py-2 text-center text-sm font-medium text-success">
+                    Цель достигнута!
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* sm+: сохранить текущий десктопный вид */}
+      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+        {goals.map((goal) => {
+          const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100
+          const isComplete = progress >= 100
+          return (
+            <Card key={goal.id} className="rounded-3xl border-border bg-card">
               <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
                 <div className="flex min-w-0 items-start gap-3">
                   <div
