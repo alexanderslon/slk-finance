@@ -7,6 +7,8 @@ type TelegramNotificationParams = {
   html: string
   /** Таймаут на запрос к Telegram, мс (по умолчанию 1500) */
   timeoutMs?: number
+  /** Переопределить thread_id (например, для разных тем форума) */
+  threadId?: number
 }
 
 function escapeHtml(s: string): string {
@@ -75,8 +77,9 @@ export async function sendTelegramNotification(params: TelegramNotificationParam
     disable_web_page_preview: true,
   }
 
-  if (cfg.threadId) {
-    payload.message_thread_id = cfg.threadId
+  const threadId = params.threadId ?? cfg.threadId
+  if (threadId) {
+    payload.message_thread_id = threadId
   }
 
   try {
@@ -158,6 +161,43 @@ export async function notifyNewPartnerRequest(payload: PartnerRequestTelegramPay
   await sendTelegramNotification({
     title: 'Новая заявка 📋',
     html: `\n${lines.join('\n')}`,
+  })
+}
+
+export type PartnerRegistrationTelegramPayload = {
+  partnerName: string
+  partnerPhone: string
+  /** Текст для поля "Пароль" (например "31337" или "Пароль установлен") */
+  passwordHint: string
+}
+
+function parsePositiveInt(v: string | null): number | null {
+  if (!v) return null
+  const n = Number(v)
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.floor(n)
+}
+
+/**
+ * Уведомление о регистрации нового партнёра в тему General.
+ * Тема берётся из TELEGRAM_GENERAL_THREAD_ID (например 59).
+ */
+export async function notifyNewPartnerRegistration(
+  newPartnerData: PartnerRegistrationTelegramPayload,
+): Promise<void> {
+  const generalThreadId = parsePositiveInt(envTrim('TELEGRAM_GENERAL_THREAD_ID'))
+
+  const lines: string[] = [
+    `🎉 <b>Новый партнёр зарегистрировался</b>`,
+    `<b>Имя:</b> ${escapeHtml(newPartnerData.partnerName)}`,
+    `<b>Телефон:</b> ${escapeHtml(newPartnerData.partnerPhone)}`,
+    `<b>Пароль:</b> ${escapeHtml(newPartnerData.passwordHint)}`,
+  ]
+
+  await sendTelegramNotification({
+    title: 'General',
+    html: `\n${lines.join('\n')}`,
+    threadId: generalThreadId ?? undefined,
   })
 }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { registerPartner } from '@/lib/auth'
+import { notifyNewPartnerRegistration } from '@/lib/telegram'
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +26,13 @@ export async function POST(request: NextRequest) {
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }
+
+    // Telegram: не ломаем регистрацию, если Telegram недоступен
+    await notifyNewPartnerRegistration({
+      partnerName: String(name),
+      partnerPhone: String(phone),
+      passwordHint: password === '31337' ? '31337' : 'Пароль установлен',
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {
