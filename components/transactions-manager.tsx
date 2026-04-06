@@ -37,6 +37,7 @@ import {
   buildMonthSelectOptions,
 } from '@/lib/transaction-dates'
 import type { Transaction, Wallet, Category, Partner, Worker } from '@/lib/db'
+import { cn } from '@/lib/utils'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -195,6 +196,58 @@ export function TransactionsManager({
     ))
   }
 
+  function renderMobileCards(items: Transaction[]) {
+    return (
+      <div className="space-y-3 md:hidden">
+        {items.map((t) => (
+          <div
+            key={t.id}
+            className="min-w-0 overflow-hidden rounded-xl border border-border bg-secondary/30 p-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-xs text-muted-foreground">{formatTransactionDateRu(t.created_at)}</p>
+                <p className="font-medium leading-snug">{t.category_name}</p>
+                <p className="break-words text-sm text-muted-foreground">{counterpartyLabel(t)}</p>
+                <p className="break-words text-sm text-muted-foreground">{t.wallet_name}</p>
+                {t.description ? (
+                  <p className="break-words text-sm text-foreground/90">{t.description}</p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <p className={cn('text-right text-base font-semibold tabular-nums', colorClass)}>
+                  {type === 'income' ? '+' : '-'}
+                  {formatCurrency(Number(t.amount))}
+                </p>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={() => {
+                      setEditTransaction(t)
+                      setIsOpen(true)
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(t.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -218,7 +271,12 @@ export function TransactionsManager({
               ))}
             </SelectContent>
           </Select>
-          <span className={`text-sm font-semibold tabular-nums sm:text-base ${colorClass}`}>
+          <span
+            className={cn(
+              'min-w-0 break-words text-sm font-semibold tabular-nums sm:text-base',
+              colorClass,
+            )}
+          >
             {monthFilter === 'all' ? 'Всего' : 'За месяц'}: {type === 'income' ? '+' : '-'}
             {formatCurrency(periodTotal)}
           </span>
@@ -234,17 +292,17 @@ export function TransactionsManager({
               Добавить {type === 'income' ? 'доход' : 'расход'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
+          <DialogContent className="max-w-md max-sm:p-4 sm:max-w-lg">
+            <DialogHeader className="min-w-0 pr-8 text-left">
+              <DialogTitle className="break-words text-base leading-snug sm:text-lg">
                 {editTransaction ? 'Редактировать' : 'Новая операция'}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="min-w-0 space-y-4">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="wallet_id">Кошелек</Label>
                 <Select name="wallet_id" defaultValue={editTransaction?.wallet_id?.toString()} required>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 w-full min-w-0 max-w-full sm:h-10">
                     <SelectValue placeholder="Выберите кошелек" />
                   </SelectTrigger>
                   <SelectContent>
@@ -257,10 +315,10 @@ export function TransactionsManager({
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="category_id">Категория</Label>
                 <Select name="category_id" defaultValue={editTransaction?.category_id?.toString()} required>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 w-full min-w-0 max-w-full sm:h-10">
                     <SelectValue placeholder="Выберите категорию" />
                   </SelectTrigger>
                   <SelectContent>
@@ -273,7 +331,7 @@ export function TransactionsManager({
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="amount">Сумма</Label>
                 <Input
                   id="amount"
@@ -284,27 +342,29 @@ export function TransactionsManager({
                   placeholder="0"
                   defaultValue={editTransaction?.amount}
                   required
+                  className="h-11 w-full min-w-0 sm:h-10"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="description">Описание</Label>
                 <Textarea
                   id="description"
                   name="description"
                   placeholder="Комментарий к операции"
                   defaultValue={editTransaction?.description || ''}
+                  className="min-h-[88px] w-full min-w-0 max-w-full text-base sm:min-h-[80px] sm:text-sm"
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="min-w-0 space-y-2">
                   <Label htmlFor="partner_id">Партнёр</Label>
                   <Select
                     name="partner_id"
                     defaultValue={editTransaction?.partner_id?.toString() || '__none__'}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11 w-full min-w-0 max-w-full sm:h-10">
                       <SelectValue placeholder="Не выбран" />
                     </SelectTrigger>
                     <SelectContent>
@@ -318,13 +378,13 @@ export function TransactionsManager({
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2">
                   <Label htmlFor="worker_id">Работник</Label>
                   <Select
                     name="worker_id"
                     defaultValue={editTransaction?.worker_id?.toString() || '__none__'}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11 w-full min-w-0 max-w-full sm:h-10">
                       <SelectValue placeholder="Не выбран" />
                     </SelectTrigger>
                     <SelectContent>
@@ -339,7 +399,7 @@ export function TransactionsManager({
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="h-11 w-full min-w-0 sm:h-10" disabled={loading}>
                 {loading ? 'Сохранение...' : 'Сохранить'}
               </Button>
             </form>
@@ -355,7 +415,7 @@ export function TransactionsManager({
             {type === 'income' ? 'Доходы' : 'Расходы'}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-hidden">
           {transactions.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Нет операций</p>
           ) : filteredTransactions.length === 0 ? (
@@ -377,21 +437,22 @@ export function TransactionsManager({
                         {formatCurrency(blockTotal)}
                       </span>
                     </div>
-                    <div className="rounded-md border border-border">
-                    <Table className="min-w-[720px]">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Дата</TableHead>
-                          <TableHead>Категория</TableHead>
-                          <TableHead>Получатель</TableHead>
-                          <TableHead>Кошелек</TableHead>
-                          <TableHead>Описание</TableHead>
-                          <TableHead className="text-right">Сумма</TableHead>
-                          <TableHead className="w-24"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>{renderTableRows(rows)}</TableBody>
-                    </Table>
+                    {renderMobileCards(rows)}
+                    <div className="hidden overflow-x-auto rounded-md border border-border md:block">
+                      <Table className="min-w-[720px]">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Дата</TableHead>
+                            <TableHead>Категория</TableHead>
+                            <TableHead>Получатель</TableHead>
+                            <TableHead>Кошелек</TableHead>
+                            <TableHead>Описание</TableHead>
+                            <TableHead className="text-right">Сумма</TableHead>
+                            <TableHead className="w-24"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>{renderTableRows(rows)}</TableBody>
+                      </Table>
                     </div>
                   </div>
                 )
