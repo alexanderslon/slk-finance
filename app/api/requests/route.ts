@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest) {
       await sql`
         INSERT INTO transactions (wallet_id, category_id, type, amount, description, partner_id)
         VALUES (${wallet_id}, ${req.category_id}, 'expense', ${req.amount}, 
-                ${'Заявка от партнера'}, ${req.partner_id})
+                ${'Заявка от партнёра'}, ${req.partner_id})
       `
 
       // Update wallet balance

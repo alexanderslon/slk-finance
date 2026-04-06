@@ -107,7 +107,7 @@ export function PartnersManager({
   }
 
   async function handlePartnerDelete(id: number) {
-    if (!confirm('Удалить партнера? Все связанные аккаунты также будут удалены.')) return
+    if (!confirm('Удалить партнёра? Все связанные аккаунты также будут удалены.')) return
 
     const res = await fetch(`/api/partners?id=${id}`, { method: 'DELETE' })
     if (res.ok) {
@@ -118,7 +118,7 @@ export function PartnersManager({
   }
 
   async function handleUserDelete(id: number) {
-    if (!confirm('Удалить аккаунт партнера?')) return
+    if (!confirm('Удалить аккаунт партнёра?')) return
 
     const res = await fetch(`/api/partner-users?id=${id}`, { method: 'DELETE' })
     if (res.ok) {
@@ -145,7 +145,7 @@ export function PartnersManager({
     <Tabs defaultValue="partners" className="space-y-6">
       <TabsList className="w-full">
         <TabsTrigger value="partners" className="flex-1">
-          Партнеры
+          Партнёры
         </TabsTrigger>
         <TabsTrigger value="accounts" className="flex-1">
           Аккаунты
@@ -161,12 +161,12 @@ export function PartnersManager({
             <DialogTrigger asChild>
               <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
                 <Plus className="h-4 w-4 shrink-0" />
-                Добавить партнера
+                Добавить партнёра
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{editPartner ? 'Редактировать партнера' : 'Новый партнер'}</DialogTitle>
+                <DialogTitle>{editPartner ? 'Редактировать партнёра' : 'Новый партнёр'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handlePartnerSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -174,7 +174,7 @@ export function PartnersManager({
                   <Input
                     id="name"
                     name="name"
-                    placeholder="Название партнера"
+                    placeholder="Название партнёра"
                     defaultValue={editPartner?.name}
                     required
                   />
@@ -213,12 +213,12 @@ export function PartnersManager({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Handshake className="h-5 w-5" />
-              Партнеры ({partners.length})
+              Партнёры ({partners.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {partners.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Нет партнеров</p>
+              <p className="text-center text-muted-foreground py-8">Нет партнёров</p>
             ) : (
               <>
                 <div className="space-y-3 md:hidden">
@@ -340,10 +340,10 @@ export function PartnersManager({
               </DialogHeader>
               <form onSubmit={handleUserSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="partner_id">Партнер</Label>
+                  <Label htmlFor="partner_id">Партнёр</Label>
                   <Select name="partner_id" defaultValue={editUser?.partner_id?.toString()} required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Выберите партнера" />
+                      <SelectValue placeholder="Выберите партнёра" />
                     </SelectTrigger>
                     <SelectContent>
                       {partners.map((p) => (
@@ -391,7 +391,7 @@ export function PartnersManager({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Аккаунты партнеров ({partnerUsers.length})
+              Аккаунты партнёров ({partnerUsers.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -451,7 +451,7 @@ export function PartnersManager({
                     <TableHeader>
                       <TableRow>
                         <TableHead>Логин</TableHead>
-                        <TableHead>Партнер</TableHead>
+                        <TableHead>Партнёр</TableHead>
                         <TableHead>Статус</TableHead>
                         <TableHead>Активен</TableHead>
                         <TableHead className="w-24"></TableHead>

@@ -104,7 +104,7 @@ export function RequestsManager({
             <form onSubmit={handleAction} className="min-w-0 space-y-4">
               <div className="space-y-3 rounded-lg border border-border bg-secondary/30 p-3 sm:p-4">
                 <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                  <span className="shrink-0 text-muted-foreground">Партнер</span>
+                  <span className="shrink-0 text-muted-foreground">Партнёр</span>
                   <span className="min-w-0 break-words font-medium sm:text-right">
                     {selectedRequest.partner_name}
                   </span>

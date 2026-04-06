@@ -27,6 +27,6 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: '/admin/debts', label: 'Долги', icon: CreditCard },
   { href: '/admin/goals', label: 'Цели', icon: Target },
   { href: '/admin/workers', label: 'Работники', icon: Users },
-  { href: '/admin/partners', label: 'Партнеры', icon: Handshake },
+  { href: '/admin/partners', label: 'Партнёры', icon: Handshake },
   { href: '/admin/requests', label: 'Заявки', icon: FileText, bottom: true },
 ]

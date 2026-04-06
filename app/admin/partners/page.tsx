@@ -21,8 +21,8 @@ export default async function PartnersPage() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className="space-y-1">
-        <h1 className="text-xl font-bold leading-tight sm:text-2xl">Партнеры</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">Управление партнерами и их аккаунтами</p>
+        <h1 className="text-xl font-bold leading-tight sm:text-2xl">Партнёры</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">Управление партнёрами и их аккаунтами</p>
       </div>
 
       <PartnersManager initialPartners={partners} initialPartnerUsers={partnerUsers} />

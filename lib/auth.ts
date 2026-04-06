@@ -168,7 +168,7 @@ export async function registerPartner(name: string, phone: string, password: str
   `
 
   const partnerId = partnerRows[0]?.id
-  if (!partnerId) return { error: 'Ошибка создания партнера' }
+  if (!partnerId) return { error: 'Ошибка создания партнёра' }
 
   const userRows = await sql`
     INSERT INTO partner_users (partner_id, username, password_hash, is_active)

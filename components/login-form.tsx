@@ -75,7 +75,7 @@ export function LoginForm() {
       if (data.error) {
         setError(data.error)
       } else {
-        setSuccess('Регистрация успешна! Ожидайте одобрения администратора.')
+        setSuccess('Регистрация успешна! Ожидайте одобрения админа.')
         setShowRegister(false)
       }
     } catch {
@@ -98,7 +98,7 @@ export function LoginForm() {
         {showRegister ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold sm:text-lg">Регистрация партнера</h3>
+              <h3 className="text-base font-semibold sm:text-lg">Регистрация партнёра</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -164,7 +164,7 @@ export function LoginForm() {
                     setError('')
                   }}
                   className={cn(
-                    'flex min-h-[4.5rem] flex-row items-center gap-3 rounded-xl border-2 p-3 text-left transition-all sm:min-h-[5.5rem] sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:p-4 sm:text-center',
+                    'order-2 flex min-h-[4.5rem] flex-row items-center gap-3 rounded-xl border-2 p-3 text-left transition-all sm:order-1 sm:min-h-[5.5rem] sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:p-4 sm:text-center',
                     loginRole === 'admin'
                       ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/25'
                       : 'border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40',
@@ -179,7 +179,7 @@ export function LoginForm() {
                     <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
                   <div className="min-w-0 flex-1 sm:flex-none">
-                    <span className="block text-base font-semibold leading-tight">Администратор</span>
+                    <span className="block text-base font-semibold leading-tight">Админ</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground sm:mt-1">
                       Учёт, кошельки, заявки
                     </span>
@@ -192,7 +192,7 @@ export function LoginForm() {
                     setError('')
                   }}
                   className={cn(
-                    'flex min-h-[4.5rem] flex-row items-center gap-3 rounded-xl border-2 p-3 text-left transition-all sm:min-h-[5.5rem] sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:p-4 sm:text-center',
+                    'order-1 flex min-h-[4.5rem] flex-row items-center gap-3 rounded-xl border-2 p-3 text-left transition-all sm:order-2 sm:min-h-[5.5rem] sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:p-4 sm:text-center',
                     loginRole === 'partner'
                       ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/25'
                       : 'border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40',
@@ -242,7 +242,7 @@ export function LoginForm() {
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 {success && <p className="text-sm text-primary">{success}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Вход...' : 'Войти как администратор'}
+                  {loading ? 'Вход...' : 'Войти как админ'}
                 </Button>
               </form>
             ) : (
