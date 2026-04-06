@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
 import { ADMIN_NAV_ITEMS } from '@/lib/admin-nav'
+import { SITE_NAME, SITE_TAGLINE } from '@/lib/branding'
 
 export function AdminSidebar({
   username,
@@ -62,11 +63,18 @@ export function AdminSidebar({
           paddingTop: 'env(safe-area-inset-top, 0px)',
         }}
       >
-        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border px-4 sm:h-16 sm:px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary shadow-sm">
+        <div className="flex min-h-14 shrink-0 items-center gap-3 border-b border-sidebar-border px-4 py-2.5 sm:min-h-16 sm:px-6 sm:py-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-sm">
             <Wallet className="h-[18px] w-[18px] text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-sidebar-foreground">Sarafan</span>
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-xl font-bold tracking-tight text-sidebar-foreground">
+              {SITE_NAME}
+            </span>
+            <span className="mt-0.5 block truncate text-[11px] font-medium leading-tight text-muted-foreground sm:text-xs">
+              {SITE_TAGLINE}
+            </span>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:p-4">

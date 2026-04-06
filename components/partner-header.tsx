@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { SITE_NAME, SITE_TAGLINE } from '@/lib/branding'
 import { Wallet, LogOut } from 'lucide-react'
 
 export function PartnerHeader({
@@ -30,9 +31,9 @@ export function PartnerHeader({
             <Wallet className="h-4 w-4 text-primary-foreground sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold sm:text-lg">Sarafan</h1>
+            <h1 className="truncate text-base font-semibold sm:text-lg">{SITE_NAME}</h1>
             <p className="truncate text-xs leading-snug text-muted-foreground sm:text-sm">
-              От человека — к человеку
+              {SITE_TAGLINE}
             </p>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RuPhoneField } from '@/components/ru-phone-field'
+import { SITE_NAME, SITE_TAGLINE } from '@/lib/branding'
 import { RU_PHONE_FIELD_PREFIX, ruPhoneDigits } from '@/lib/phone-format'
 import { cn } from '@/lib/utils'
 import { Wallet, Users, UserPlus, ShieldCheck } from 'lucide-react'
@@ -92,9 +93,9 @@ export function LoginForm() {
         <div className="mx-auto mb-1 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary shadow-lg sm:mb-2 sm:h-24 sm:w-24">
           <Wallet className="h-10 w-10 text-primary-foreground sm:h-11 sm:w-11" />
         </div>
-        <CardTitle className="text-4xl font-bold tracking-tight sm:text-5xl">Sarafan</CardTitle>
+        <CardTitle className="text-4xl font-bold tracking-tight sm:text-5xl">{SITE_NAME}</CardTitle>
         <CardDescription className="text-lg text-muted-foreground sm:text-xl sm:leading-snug">
-          От человека — к человеку
+          {SITE_TAGLINE}
         </CardDescription>
         <p className="mx-auto max-w-md pt-1 text-center text-base leading-relaxed text-muted-foreground sm:text-lg">
           Мы соединяем тех, кто ищет работу или услуги, с теми, кто может их качественно выполнить.
