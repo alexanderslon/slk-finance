@@ -41,6 +41,7 @@ import {
   PARTNER_BONUS_PER_SQM_RUB,
   PARTNER_SQM_SELECT_OPTIONS,
 } from '@/lib/partner-bonus'
+import { cn } from '@/lib/utils'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -49,6 +50,13 @@ function formatCurrency(amount: number) {
     maximumFractionDigits: 0,
   }).format(amount)
 }
+
+/** Зона ввода в форме заявки: заметная рамка и подсветка при фокусе внутри */
+const partnerRequestFieldClass =
+  'space-y-2 rounded-2xl border-2 border-primary/25 bg-primary/[0.07] p-3.5 shadow-sm ring-offset-background transition-[border-color,box-shadow,background-color] focus-within:border-primary/50 focus-within:shadow-md focus-within:ring-2 focus-within:ring-primary/25 dark:bg-primary/[0.1] dark:focus-within:bg-primary/[0.14]'
+
+const partnerRequestControlClass =
+  'border-primary/20 bg-background shadow-sm dark:border-primary/25 dark:bg-background'
 
 const statusConfig = {
   pending: { label: 'На рассмотрении', icon: Clock, color: 'bg-warning/10 text-warning border-warning' },
@@ -160,8 +168,15 @@ export function PartnerDashboard({
                 }}
               >
                 <div className="space-y-4 pb-2">
-                  <div className="space-y-2 scroll-mt-[max(0.5rem,env(safe-area-inset-top,0px))]">
-                    <Label htmlFor="customer_phone">Номер заказчика</Label>
+                  <div
+                    className={cn(
+                      partnerRequestFieldClass,
+                      'scroll-mt-[max(0.5rem,env(safe-area-inset-top,0px))]',
+                    )}
+                  >
+                    <Label htmlFor="customer_phone" className="font-medium">
+                      Номер заказчика
+                    </Label>
                     <RuPhoneField
                       id="customer_phone"
                       value={customerPhone}
@@ -169,6 +184,7 @@ export function PartnerDashboard({
                         setCustomerPhone(v)
                         setPhoneError('')
                       }}
+                      className={partnerRequestControlClass}
                     />
                     {phoneError ? (
                       <p className="text-sm text-destructive">{phoneError}</p>
@@ -179,23 +195,36 @@ export function PartnerDashboard({
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Адрес (необязательно)</Label>
+                  <div className={partnerRequestFieldClass}>
+                    <Label htmlFor="address" className="font-medium">
+                      Адрес (необязательно)
+                    </Label>
                     <Input
                       id="address"
                       name="address"
                       placeholder="Город, улица, дом, кв."
-                      className="min-h-11 text-base sm:min-h-10 sm:text-sm"
+                      className={cn(
+                        'min-h-11 text-base sm:min-h-10 sm:text-sm',
+                        partnerRequestControlClass,
+                      )}
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="square_meters">Квадратура, м² (необязательно)</Label>
+                  <div className={partnerRequestFieldClass}>
+                    <Label htmlFor="square_meters" className="font-medium">
+                      Квадратура, м² (необязательно)
+                    </Label>
                     <Select
                       value={sqmChoice === '' ? 'none' : sqmChoice}
                       onValueChange={(v) => setSqmChoice(v === 'none' ? '' : v)}
                     >
-                      <SelectTrigger id="square_meters" className="min-h-11 w-full text-base sm:min-h-10 sm:text-sm">
+                      <SelectTrigger
+                        id="square_meters"
+                        className={cn(
+                          'min-h-11 w-full text-base sm:min-h-10 sm:text-sm',
+                          partnerRequestControlClass,
+                        )}
+                      >
                         <SelectValue placeholder="Не указывать" />
                       </SelectTrigger>
                       <SelectContent>
@@ -212,13 +241,18 @@ export function PartnerDashboard({
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="work_comment">Комментарий (что нужно сделать)</Label>
+                  <div className={partnerRequestFieldClass}>
+                    <Label htmlFor="work_comment" className="font-medium">
+                      Комментарий (что нужно сделать)
+                    </Label>
                     <Textarea
                       id="work_comment"
                       name="work_comment"
                       placeholder="Например: установить унитаз/смеситель, заменить трубы..."
-                      className="min-h-[100px] text-base sm:text-sm"
+                      className={cn(
+                        'min-h-[100px] text-base sm:text-sm',
+                        partnerRequestControlClass,
+                      )}
                     />
                   </div>
 

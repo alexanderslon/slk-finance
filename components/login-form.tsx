@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RuPhoneField } from '@/components/ru-phone-field'
+import { RU_PHONE_FIELD_PREFIX, ruPhoneDigits } from '@/lib/phone-format'
 import { cn } from '@/lib/utils'
 import { Wallet, Users, UserPlus, ShieldCheck } from 'lucide-react'
 
@@ -16,7 +17,7 @@ export function LoginForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showRegister, setShowRegister] = useState(false)
-  const [partnerPhone, setPartnerPhone] = useState('')
+  const [partnerPhone, setPartnerPhone] = useState(RU_PHONE_FIELD_PREFIX)
   const [regPhone, setRegPhone] = useState('')
   const [loginRole, setLoginRole] = useState<'admin' | 'partner'>('admin')
 
@@ -197,6 +198,9 @@ export function LoginForm() {
                   onClick={() => {
                     setLoginRole('partner')
                     setError('')
+                    setPartnerPhone((p) =>
+                      ruPhoneDigits(p).length === 0 ? RU_PHONE_FIELD_PREFIX : p,
+                    )
                   }}
                   className={cn(
                     'order-1 flex min-h-[4.75rem] flex-row items-center gap-3 rounded-3xl border-2 p-4 text-left transition-all sm:order-2 sm:min-h-0 sm:flex-col sm:items-center sm:justify-center sm:gap-3 sm:p-6 sm:text-center',
