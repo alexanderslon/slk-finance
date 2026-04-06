@@ -31,12 +31,15 @@ export function PartnerHeader({
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold sm:text-lg">Sarafan</h1>
-            <p className="truncate text-xs text-muted-foreground sm:text-sm">{partnerName}</p>
+            <p className="truncate text-xs leading-snug text-muted-foreground sm:text-sm">
+              От человека — к человеку
+            </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-          <span className="hidden max-w-[7rem] truncate text-xs text-muted-foreground sm:inline sm:max-w-none sm:text-sm">
-            {username}
+          <span className="hidden max-w-44 flex-col items-end text-right sm:flex sm:max-w-md">
+            <span className="truncate text-xs font-medium text-foreground">{partnerName}</span>
+            <span className="truncate text-xs text-muted-foreground sm:text-sm">{username}</span>
           </span>
           <Button
             variant="ghost"
