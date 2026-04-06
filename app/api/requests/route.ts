@@ -95,8 +95,9 @@ export async function POST(request: NextRequest) {
 
     const created = result[0]
 
-    // Telegram: fire-and-forget. Не ломаем основной запрос, если Telegram недоступен.
-    void notifyNewPartnerRequest({
+    // Telegram: не ломаем основной запрос, если Telegram недоступен.
+    // На serverless лучше дождаться короткой попытки отправки, иначе процесс может завершиться раньше.
+    await notifyNewPartnerRequest({
       requestId: Number(created.id),
       partnerName: String(user.partner_name || `Partner #${user.partner_id}`),
       amountRub: Number(created.amount || 0),

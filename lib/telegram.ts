@@ -5,6 +5,8 @@ type TelegramNotificationParams = {
   title: string
   /** HTML-текст сообщения (Telegram parse_mode=HTML) */
   html: string
+  /** Таймаут на запрос к Telegram, мс (по умолчанию 1500) */
+  timeoutMs?: number
 }
 
 function escapeHtml(s: string): string {
@@ -56,7 +58,13 @@ function getTelegramConfig(): {
  */
 export async function sendTelegramNotification(params: TelegramNotificationParams): Promise<void> {
   const cfg = getTelegramConfig()
-  if (!cfg) return
+  if (!cfg) {
+    // Чтобы было понятно в логах Vercel, почему "ничего не пришло".
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[telegram] skipped: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set')
+    }
+    return
+  }
 
   const url = `https://api.telegram.org/bot${cfg.token}/sendMessage`
 
@@ -72,11 +80,15 @@ export async function sendTelegramNotification(params: TelegramNotificationParam
   }
 
   try {
+    const controller = new AbortController()
+    const t = setTimeout(() => controller.abort(), params.timeoutMs ?? 1500)
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     })
+    clearTimeout(t)
 
     if (!res.ok) {
       const body = await res.text().catch(() => '')
