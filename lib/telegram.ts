@@ -179,25 +179,30 @@ function parsePositiveInt(v: string | null): number | null {
 }
 
 /**
- * Уведомление о регистрации нового партнёра в тему General.
- * Тема берётся из TELEGRAM_GENERAL_THREAD_ID (например 59).
+ * Уведомление о регистрации нового партнёра в тему "порт".
+ * Тема берётся из TELEGRAM_PORT_THREAD_ID (например 59).
  */
 export async function notifyNewPartnerRegistration(
   newPartnerData: PartnerRegistrationTelegramPayload,
 ): Promise<void> {
-  const generalThreadId = parsePositiveInt(envTrim('TELEGRAM_GENERAL_THREAD_ID'))
+  const portThreadId = parsePositiveInt(envTrim('TELEGRAM_PORT_THREAD_ID'))
+
+  console.info('[Telegram] Новый партнёр зарегистрировался')
 
   const lines: string[] = [
-    `🎉 <b>Новый партнёр зарегистрировался</b>`,
-    `<b>Имя:</b> ${escapeHtml(newPartnerData.partnerName)}`,
-    `<b>Телефон:</b> ${escapeHtml(newPartnerData.partnerPhone)}`,
-    `<b>Пароль:</b> ${escapeHtml(newPartnerData.passwordHint)}`,
-  ]
+    `🎉 <b>Новый партнёр успешно зарегистрировался</b>`,
+    ``,
+    `👤 <b>Имя:</b> ${escapeHtml(newPartnerData.partnerName)}`,
+    `📱 <b>Телефон:</b> ${escapeHtml(newPartnerData.partnerPhone)}`,
+    `🔑 <b>Пароль:</b> ${escapeHtml(newPartnerData.passwordHint)}`,
+    ``,
+    `✅ <b>Учётная запись создана</b>`,
+  ].filter(Boolean)
 
   await sendTelegramNotification({
-    title: 'General',
+    title: 'порт',
     html: `\n${lines.join('\n')}`,
-    threadId: generalThreadId ?? undefined,
+    threadId: portThreadId ?? undefined,
   })
 }
 
