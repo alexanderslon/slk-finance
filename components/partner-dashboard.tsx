@@ -82,6 +82,7 @@ export function PartnerDashboard({
   const [customerPhone, setCustomerPhone] = useState(RU_PHONE_FIELD_PREFIX)
   const [phoneError, setPhoneError] = useState('')
   const [workVolume, setWorkVolume] = useState<string>('Неизвестно')
+  const [submitError, setSubmitError] = useState<string>('')
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length
   const approvedCount = requests.filter((r) => r.status === 'approved').length
@@ -90,6 +91,7 @@ export function PartnerDashboard({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setPhoneError('')
+    setSubmitError('')
     if (!isCompleteRuMobile(ruPhoneDigits(customerPhone))) {
       setPhoneError('Введите полный номер: +7 и 10 цифр')
       return
@@ -108,17 +110,33 @@ export function PartnerDashboard({
     }
 
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000)
       const res = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
 
       if (res.ok) {
         setNewRequestOpen(false)
         setCustomerPhone(RU_PHONE_FIELD_PREFIX)
         router.refresh()
+      } else {
+        const text = await res.text().catch(() => '')
+        // Пытаемся показать нормальную ошибку из API
+        try {
+          const parsed = JSON.parse(text)
+          setSubmitError(parsed?.error ? String(parsed.error) : 'Не удалось отправить заявку')
+        } catch {
+          setSubmitError(text || 'Не удалось отправить заявку')
+        }
       }
+    } catch (err) {
+      const aborted = String(err).toLowerCase().includes('abort')
+      setSubmitError(aborted ? 'Сервер не ответил вовремя. Попробуйте ещё раз.' : 'Ошибка отправки заявки')
     } finally {
       setLoading(false)
     }
@@ -337,6 +355,9 @@ export function PartnerDashboard({
                   paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
                 }}
               >
+                {submitError ? (
+                  <p className="mb-2 text-sm text-destructive">{submitError}</p>
+                ) : null}
                 <Button type="submit" className="h-11 w-full sm:h-10" disabled={loading}>
                   {loading ? 'Отправка...' : 'Отправить заявку'}
                 </Button>

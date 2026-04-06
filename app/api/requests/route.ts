@@ -87,21 +87,40 @@ export async function POST(request: NextRequest) {
 
     const categoryId = await ensureExpenseCategory('Сантехника')
 
-    const result = await sql`
-      INSERT INTO partner_requests (partner_id, category_id, amount, work_volume, recommended_specialist, work_comment, customer_phone, address, square_meters)
-      VALUES (
-        ${user.partner_id},
-        ${categoryId},
-        0,
-        ${work_volume || null},
-        ${recommended_specialist || null},
-        ${work_comment || null},
-        ${customer_phone},
-        ${address || null},
-        ${squareMeters}
-      )
-      RETURNING *
-    `
+    // Совместимость с БД, где ещё нет новых колонок work_volume/recommended_specialist:
+    // сначала пробуем новый INSERT, если получаем "column does not exist" — откатываемся на старый.
+    let result: any[]
+    try {
+      result = await sql`
+        INSERT INTO partner_requests (partner_id, category_id, amount, work_volume, recommended_specialist, work_comment, customer_phone, address, square_meters)
+        VALUES (
+          ${user.partner_id},
+          ${categoryId},
+          0,
+          ${work_volume || null},
+          ${recommended_specialist || null},
+          ${work_comment || null},
+          ${customer_phone},
+          ${address || null},
+          ${squareMeters}
+        )
+        RETURNING *
+      `
+    } catch (err) {
+      const msg = String((err as any)?.message || err)
+      const missingColumn =
+        msg.includes('work_volume') ||
+        msg.includes('recommended_specialist') ||
+        msg.toLowerCase().includes('column') && msg.toLowerCase().includes('does not exist')
+      if (!missingColumn) throw err
+
+      console.warn('[requests] DB schema missing new columns; falling back to legacy insert')
+      result = await sql`
+        INSERT INTO partner_requests (partner_id, category_id, amount, work_comment, customer_phone, address, square_meters)
+        VALUES (${user.partner_id}, ${categoryId}, 0, ${work_comment || null}, ${customer_phone}, ${address || null}, ${squareMeters})
+        RETURNING *
+      `
+    }
 
     const created = result[0]
 
