@@ -294,8 +294,8 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
         })}
       </div>
 
-      {/* sm+: сохранить текущий десктопный вид */}
-      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+      {/* sm+: десктоп — шире карточки, без переносов даты по буквам */}
+      <div className="hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-3">
         {goals.map((goal) => {
           const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100
           const isComplete = progress >= 100
@@ -310,11 +310,11 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
                     <Target className={`h-5 w-5 ${isComplete ? 'text-success' : 'text-primary'}`} />
                   </div>
                   <div className="min-w-0">
-                    <CardTitle className="line-clamp-2 text-base leading-snug">
+                    <CardTitle className="line-clamp-3 text-[15px] font-semibold leading-snug sm:text-base">
                       {goal.name}
                     </CardTitle>
                     {goal.deadline ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="mt-0.5 truncate whitespace-nowrap text-xs text-muted-foreground">
                         До {format(new Date(goal.deadline), 'd MMM yyyy', { locale: ru })}
                       </p>
                     ) : null}
