@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,6 +38,9 @@ function transactionMonthShortRu(yyyyMm: string): string {
   if (!y || !m) return yyyyMm
   return format(new Date(y, m - 1, 1), 'LLL yyyy', { locale: ru })
 }
+
+const dashLinkClass =
+  'block rounded-xl outline-none ring-offset-background transition-colors hover:bg-muted/25 active:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring'
 
 type Props = {
   totalBalance: number
@@ -194,159 +198,180 @@ export function DashboardStats({
 
       {/* Mobile: компактные карточки как в партнёрке */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:hidden">
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <Wallet className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-base font-bold tabular-nums leading-tight">
-                {formatCurrency(totalBalance)}
-              </p>
-              <p className="text-[11px] leading-tight text-muted-foreground">Баланс</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/wallets" className={dashLinkClass} aria-label="Перейти к кошелькам">
+          <Card className="h-full border-border bg-card">
+            <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Wallet className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold tabular-nums leading-tight">
+                  {formatCurrency(totalBalance)}
+                </p>
+                <p className="text-[11px] leading-tight text-muted-foreground">Баланс</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success/10">
-              <ArrowUpCircle className="h-4 w-4 text-success" />
-            </div>
-            <div className="min-w-0">
-              <p
-                className={cn(
-                  'truncate text-base font-bold tabular-nums leading-tight text-success',
-                  loading && 'opacity-50',
-                )}
-              >
-                {formatCurrency(income)}
-              </p>
-              <p className="text-[11px] leading-tight text-muted-foreground">
-                Доход · {transactionMonthShortRu(month)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/income" className={dashLinkClass} aria-label="Перейти к доходам">
+          <Card className="h-full border-border bg-card">
+            <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success/10">
+                <ArrowUpCircle className="h-4 w-4 text-success" />
+              </div>
+              <div className="min-w-0">
+                <p
+                  className={cn(
+                    'truncate text-base font-bold tabular-nums leading-tight text-success',
+                    loading && 'opacity-50',
+                  )}
+                >
+                  {formatCurrency(income)}
+                </p>
+                <p className="text-[11px] leading-tight text-muted-foreground">
+                  Доход · {transactionMonthShortRu(month)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
-              <ArrowDownCircle className="h-4 w-4 text-destructive" />
-            </div>
-            <div className="min-w-0">
-              <p
-                className={cn(
-                  'truncate text-base font-bold tabular-nums leading-tight text-destructive',
-                  loading && 'opacity-50',
-                )}
-              >
-                {formatCurrency(expenses)}
-              </p>
-              <p className="text-[11px] leading-tight text-muted-foreground">
-                Расход · {transactionMonthShortRu(month)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/expenses" className={dashLinkClass} aria-label="Перейти к расходам">
+          <Card className="h-full border-border bg-card">
+            <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+                <ArrowDownCircle className="h-4 w-4 text-destructive" />
+              </div>
+              <div className="min-w-0">
+                <p
+                  className={cn(
+                    'truncate text-base font-bold tabular-nums leading-tight text-destructive',
+                    loading && 'opacity-50',
+                  )}
+                >
+                  {formatCurrency(expenses)}
+                </p>
+                <p className="text-[11px] leading-tight text-muted-foreground">
+                  Расход · {transactionMonthShortRu(month)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-border bg-card">
-          <CardContent className="flex items-center gap-2.5 p-3 pt-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warning/10">
-              <FileText className="h-4 w-4 text-warning" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-base font-bold tabular-nums leading-tight">{pendingRequests}</p>
-              <p className="text-[11px] leading-tight text-muted-foreground">Новые заявки</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/requests" className={dashLinkClass} aria-label="Перейти к заявкам">
+          <Card className="h-full border-border bg-card">
+            <CardContent className="flex items-center gap-2.5 p-3 pt-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warning/10">
+                <FileText className="h-4 w-4 text-warning" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold tabular-nums leading-tight">{pendingRequests}</p>
+                <p className="text-[11px] leading-tight text-muted-foreground">Новые заявки</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
-      <div
-        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-border bg-card/60 px-3 py-2.5 text-[11px] leading-snug text-muted-foreground md:hidden"
-        aria-label="Долги"
+      <Link
+        href="/admin/debts"
+        className={cn(dashLinkClass, 'md:hidden')}
+        aria-label="Перейти к долгам"
       >
-        <span>
-          Дал: <span className="font-semibold text-success">{formatCurrency(totalDebtGiven)}</span>
-        </span>
-        <span>
-          Взял: <span className="font-semibold text-destructive">{formatCurrency(totalDebtTaken)}</span>
-        </span>
-      </div>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-border bg-card/60 px-3 py-2.5 text-[11px] leading-snug text-muted-foreground">
+          <span>
+            Дал: <span className="font-semibold text-success">{formatCurrency(totalDebtGiven)}</span>
+          </span>
+          <span>
+            Взял: <span className="font-semibold text-destructive">{formatCurrency(totalDebtTaken)}</span>
+          </span>
+        </div>
+      </Link>
 
       {/* Desktop / tablet: прежняя сетка из пяти карточек */}
       <div className="hidden grid-cols-2 gap-3 sm:gap-4 md:grid lg:grid-cols-3 xl:grid-cols-5">
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
-            <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">Общий баланс</CardTitle>
-            <Wallet className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent className="pb-4 sm:pb-6">
-            <div className="text-xl font-bold tabular-nums sm:text-2xl">{formatCurrency(totalBalance)}</div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/wallets" className={dashLinkClass} aria-label="Перейти к кошелькам">
+          <Card className="h-full border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
+              <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">Общий баланс</CardTitle>
+              <Wallet className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent className="pb-4 sm:pb-6">
+              <div className="text-xl font-bold tabular-nums sm:text-2xl">{formatCurrency(totalBalance)}</div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
-            <CardTitle className="line-clamp-2 text-xs font-medium text-muted-foreground sm:text-sm">
-              Доходы за {transactionMonthTitleRu(month)}
-            </CardTitle>
-            <ArrowUpCircle className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent className="pb-4 sm:pb-6">
-            <div
-              className={`text-xl font-bold tabular-nums text-success sm:text-2xl ${loading ? 'opacity-50' : ''}`}
-            >
-              {formatCurrency(income)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
-            <CardTitle className="line-clamp-2 text-xs font-medium text-muted-foreground sm:text-sm">
-              Расходы за {transactionMonthTitleRu(month)}
-            </CardTitle>
-            <ArrowDownCircle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent className="pb-4 sm:pb-6">
-            <div
-              className={`text-xl font-bold tabular-nums text-destructive sm:text-2xl ${loading ? 'opacity-50' : ''}`}
-            >
-              {formatCurrency(expenses)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
-            <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">Долги</CardTitle>
-            <CreditCard className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent className="pb-4 sm:pb-6">
-            <div className="flex flex-col gap-1">
-              <div className="text-xs sm:text-sm">
-                <span className="text-muted-foreground">Дал: </span>
-                <span className="font-medium text-success">{formatCurrency(totalDebtGiven)}</span>
+        <Link href="/admin/income" className={dashLinkClass} aria-label="Перейти к доходам">
+          <Card className="h-full border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
+              <CardTitle className="line-clamp-2 text-xs font-medium text-muted-foreground sm:text-sm">
+                Доходы за {transactionMonthTitleRu(month)}
+              </CardTitle>
+              <ArrowUpCircle className="h-4 w-4 shrink-0 text-success" />
+            </CardHeader>
+            <CardContent className="pb-4 sm:pb-6">
+              <div
+                className={`text-xl font-bold tabular-nums text-success sm:text-2xl ${loading ? 'opacity-50' : ''}`}
+              >
+                {formatCurrency(income)}
               </div>
-              <div className="text-xs sm:text-sm">
-                <span className="text-muted-foreground">Взял: </span>
-                <span className="font-medium text-destructive">{formatCurrency(totalDebtTaken)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-border bg-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
-            <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">Новые заявки</CardTitle>
-            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-warning" />
-          </CardHeader>
-          <CardContent className="pb-4 sm:pb-6">
-            <div className="text-xl font-bold tabular-nums sm:text-2xl">{pendingRequests}</div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/expenses" className={dashLinkClass} aria-label="Перейти к расходам">
+          <Card className="h-full border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
+              <CardTitle className="line-clamp-2 text-xs font-medium text-muted-foreground sm:text-sm">
+                Расходы за {transactionMonthTitleRu(month)}
+              </CardTitle>
+              <ArrowDownCircle className="h-4 w-4 shrink-0 text-destructive" />
+            </CardHeader>
+            <CardContent className="pb-4 sm:pb-6">
+              <div
+                className={`text-xl font-bold tabular-nums text-destructive sm:text-2xl ${loading ? 'opacity-50' : ''}`}
+              >
+                {formatCurrency(expenses)}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/debts" className={dashLinkClass} aria-label="Перейти к долгам">
+          <Card className="h-full border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
+              <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">Долги</CardTitle>
+              <CreditCard className="h-4 w-4 text-accent" />
+            </CardHeader>
+            <CardContent className="pb-4 sm:pb-6">
+              <div className="flex flex-col gap-1">
+                <div className="text-xs sm:text-sm">
+                  <span className="text-muted-foreground">Дал: </span>
+                  <span className="font-medium text-success">{formatCurrency(totalDebtGiven)}</span>
+                </div>
+                <div className="text-xs sm:text-sm">
+                  <span className="text-muted-foreground">Взял: </span>
+                  <span className="font-medium text-destructive">{formatCurrency(totalDebtTaken)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/requests" className={dashLinkClass} aria-label="Перейти к заявкам">
+          <Card className="h-full border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-6">
+              <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">Новые заявки</CardTitle>
+              <span className="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-warning" />
+            </CardHeader>
+            <CardContent className="pb-4 sm:pb-6">
+              <div className="text-xl font-bold tabular-nums sm:text-2xl">{pendingRequests}</div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   )
