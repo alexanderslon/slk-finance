@@ -148,6 +148,10 @@ export type PartnerRequest = {
   partner_id: number
   category_id: number
   amount: number
+  /** Объём работ (как партнёр его оценил) */
+  work_volume?: string | null
+  /** Кого партнёр рекомендует (если применимо) */
+  recommended_specialist?: string | null
   work_comment?: string
   customer_phone: string
   address?: string

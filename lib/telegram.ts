@@ -109,6 +109,8 @@ export type PartnerRequestTelegramPayload = {
   squareMeters?: number | null
   customerPhone: string
   address?: string | null
+  workVolume?: string | null
+  recommendedSpecialist?: string | null
   workComment?: string | null
   status: 'pending' | 'approved' | 'rejected'
 }
@@ -146,6 +148,14 @@ export async function notifyNewPartnerRequest(payload: PartnerRequestTelegramPay
 
   if (payload.squareMeters !== null && payload.squareMeters !== undefined) {
     lines.push(`<b>Квадратура:</b> ${escapeHtml(String(payload.squareMeters))} м²`)
+  }
+
+  if (payload.workVolume?.trim()) {
+    lines.push(`<b>Объём работ:</b> ${escapeHtml(payload.workVolume)}`)
+  }
+
+  if (payload.recommendedSpecialist?.trim()) {
+    lines.push(`<b>Рекомендованный специалист:</b> ${escapeHtml(payload.recommendedSpecialist)}`)
   }
 
   lines.push(`<b>Телефон клиента:</b> ${escapeHtml(payload.customerPhone)}`)

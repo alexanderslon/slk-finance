@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS partner_requests (
   partner_id INTEGER REFERENCES partners(id) ON DELETE CASCADE,
   category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
   amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  work_volume TEXT,
+  recommended_specialist TEXT,
   work_comment TEXT,
   customer_phone VARCHAR(50) NOT NULL,
   address TEXT,

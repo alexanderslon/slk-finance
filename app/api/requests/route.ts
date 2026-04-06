@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { customer_phone, address, work_comment } = body
+    const { customer_phone, address, work_comment, work_volume, recommended_specialist } = body
     const rawSqm = body.square_meters
     let squareMeters: number | null = null
     if (rawSqm !== undefined && rawSqm !== null && rawSqm !== '') {
@@ -88,8 +88,18 @@ export async function POST(request: NextRequest) {
     const categoryId = await ensureExpenseCategory('Сантехника')
 
     const result = await sql`
-      INSERT INTO partner_requests (partner_id, category_id, amount, work_comment, customer_phone, address, square_meters)
-      VALUES (${user.partner_id}, ${categoryId}, 0, ${work_comment || null}, ${customer_phone}, ${address || null}, ${squareMeters})
+      INSERT INTO partner_requests (partner_id, category_id, amount, work_volume, recommended_specialist, work_comment, customer_phone, address, square_meters)
+      VALUES (
+        ${user.partner_id},
+        ${categoryId},
+        0,
+        ${work_volume || null},
+        ${recommended_specialist || null},
+        ${work_comment || null},
+        ${customer_phone},
+        ${address || null},
+        ${squareMeters}
+      )
       RETURNING *
     `
 
@@ -104,6 +114,8 @@ export async function POST(request: NextRequest) {
       squareMeters: created.square_meters ?? null,
       customerPhone: String(created.customer_phone),
       address: created.address ?? null,
+      workVolume: created.work_volume ?? null,
+      recommendedSpecialist: created.recommended_specialist ?? null,
       workComment: created.work_comment ?? null,
       status: created.status,
     })

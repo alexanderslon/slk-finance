@@ -81,6 +81,7 @@ export function PartnerDashboard({
   const [sqmChoice, setSqmChoice] = useState<string>('')
   const [customerPhone, setCustomerPhone] = useState(RU_PHONE_FIELD_PREFIX)
   const [phoneError, setPhoneError] = useState('')
+  const [workVolume, setWorkVolume] = useState<string>('Неизвестно')
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length
   const approvedCount = requests.filter((r) => r.status === 'approved').length
@@ -100,6 +101,8 @@ export function PartnerDashboard({
     const data = {
       customer_phone: customerPhone.trim(),
       address: (formData.get('address') as string) || null,
+      work_volume: workVolume || null,
+      recommended_specialist: (formData.get('recommended_specialist') as string) || null,
       work_comment: (formData.get('work_comment') as string) || null,
       ...(sqmChoice ? { square_meters: sqmChoice } : {}),
     }
@@ -138,6 +141,7 @@ export function PartnerDashboard({
               setSqmChoice('')
               setCustomerPhone(RU_PHONE_FIELD_PREFIX)
               setPhoneError('')
+              setWorkVolume('Неизвестно')
             }
           }}
           fixed
@@ -238,6 +242,57 @@ export function PartnerDashboard({
                     </Select>
                     <p className="text-xs text-muted-foreground leading-snug">
                       Целые м²: к бонусу +{PARTNER_BONUS_PER_SQM_RUB.toLocaleString('ru-RU')} ₽ за каждый м²
+                    </p>
+                  </div>
+
+                  <div className={partnerRequestFieldClass}>
+                    <Label htmlFor="work_volume" className="font-medium">
+                      Объём работ
+                    </Label>
+                    <Select value={workVolume} onValueChange={setWorkVolume}>
+                      <SelectTrigger
+                        id="work_volume"
+                        className={cn(
+                          'min-h-11 w-full text-base sm:min-h-10 sm:text-sm',
+                          partnerRequestControlClass,
+                        )}
+                      >
+                        <SelectValue placeholder="Выберите объём" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          'Неизвестно',
+                          'Небольшой объём',
+                          'Средний объём',
+                          'Большой объём',
+                          'Под ключ',
+                        ].map((v) => (
+                          <SelectItem key={v} value={v}>
+                            {v}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      Если клиент не озвучил детали — выберите «Неизвестно».
+                    </p>
+                  </div>
+
+                  <div className={partnerRequestFieldClass}>
+                    <Label htmlFor="recommended_specialist" className="font-medium">
+                      Рекомендованный специалист (необязательно)
+                    </Label>
+                    <Input
+                      id="recommended_specialist"
+                      name="recommended_specialist"
+                      placeholder="Например: Сергей, сантехник"
+                      className={cn(
+                        'min-h-11 text-base sm:min-h-10 sm:text-sm',
+                        partnerRequestControlClass,
+                      )}
+                    />
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      Если вы посоветовали конкретного мастера — укажите его имя/роль.
                     </p>
                   </div>
 

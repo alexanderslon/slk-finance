@@ -10,7 +10,7 @@ import { RuPhoneField } from '@/components/ru-phone-field'
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/branding'
 import { RU_PHONE_FIELD_PREFIX, ruPhoneDigits } from '@/lib/phone-format'
 import { cn } from '@/lib/utils'
-import { Wallet, Users, UserPlus, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, Wallet, Users, UserPlus, ShieldCheck } from 'lucide-react'
 
 export function LoginForm() {
   const router = useRouter()
@@ -20,6 +20,8 @@ export function LoginForm() {
   const [showRegister, setShowRegister] = useState(false)
   const [partnerPhone, setPartnerPhone] = useState(RU_PHONE_FIELD_PREFIX)
   const [regPhone, setRegPhone] = useState('')
+  const [showRegPassword, setShowRegPassword] = useState(false)
+  const [showRegPasswordConfirm, setShowRegPasswordConfirm] = useState(false)
   const [loginRole, setLoginRole] = useState<'admin' | 'partner'>('admin')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>, type: 'admin' | 'partner') {
@@ -64,6 +66,13 @@ export function LoginForm() {
     const name = formData.get('name') as string
     const phone = formData.get('phone') as string
     const password = formData.get('password') as string
+    const passwordConfirm = formData.get('password_confirm') as string
+
+    if (password !== passwordConfirm) {
+      setLoading(false)
+      setError('Пароли не совпадают')
+      return
+    }
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -113,6 +122,8 @@ export function LoginForm() {
                 onClick={() => {
                   setShowRegister(false)
                   setRegPhone('')
+                  setShowRegPassword(false)
+                  setShowRegPasswordConfirm(false)
                 }}
               >
                 Назад
@@ -140,14 +151,55 @@ export function LoginForm() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="reg-password">Пароль</Label>
-                <Input
-                  id="reg-password"
-                  name="password"
-                  type="password"
-                  placeholder="Придумайте пароль"
-                  required
-                  minLength={4}
-                />
+                <div className="relative">
+                  <Input
+                    id="reg-password"
+                    name="password"
+                    type={showRegPassword ? 'text' : 'password'}
+                    placeholder="Придумайте пароль"
+                    required
+                    minLength={4}
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowRegPassword((v) => !v)}
+                    aria-label={showRegPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showRegPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Проверьте, что пароль введён правильно. Его нельзя восстановить — только сбросить.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="reg-password-confirm">Повторите пароль</Label>
+                <div className="relative">
+                  <Input
+                    id="reg-password-confirm"
+                    name="password_confirm"
+                    type={showRegPasswordConfirm ? 'text' : 'password'}
+                    placeholder="Повторите пароль"
+                    required
+                    minLength={4}
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowRegPasswordConfirm((v) => !v)}
+                    aria-label={showRegPasswordConfirm ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showRegPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               {success && <p className="text-sm text-primary">{success}</p>}
@@ -171,7 +223,7 @@ export function LoginForm() {
                     setError('')
                   }}
                   className={cn(
-                    'order-2 flex min-h-[4.75rem] flex-row items-center gap-3 rounded-3xl border-2 p-4 text-left transition-all sm:order-1 sm:min-h-0 sm:flex-col sm:items-center sm:justify-center sm:gap-3 sm:p-6 sm:text-center',
+                    'order-2 flex min-h-19 flex-row items-center gap-3 rounded-3xl border-2 p-4 text-left transition-all sm:order-1 sm:min-h-0 sm:flex-col sm:items-center sm:justify-center sm:gap-3 sm:p-6 sm:text-center',
                     loginRole === 'admin'
                       ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
                       : 'border-border bg-secondary/30 hover:border-primary/50 hover:bg-secondary/50',
@@ -204,7 +256,7 @@ export function LoginForm() {
                     )
                   }}
                   className={cn(
-                    'order-1 flex min-h-[4.75rem] flex-row items-center gap-3 rounded-3xl border-2 p-4 text-left transition-all sm:order-2 sm:min-h-0 sm:flex-col sm:items-center sm:justify-center sm:gap-3 sm:p-6 sm:text-center',
+                    'order-1 flex min-h-19 flex-row items-center gap-3 rounded-3xl border-2 p-4 text-left transition-all sm:order-2 sm:min-h-0 sm:flex-col sm:items-center sm:justify-center sm:gap-3 sm:p-6 sm:text-center',
                     loginRole === 'partner'
                       ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
                       : 'border-border bg-secondary/30 hover:border-primary/50 hover:bg-secondary/50',
