@@ -18,7 +18,7 @@ export function PartnerShell({
       <div className="min-h-dvh min-h-[100dvh] bg-background">
         <PartnerHeader partnerName={partnerName} username={username} />
         <main
-          className="container mx-auto max-w-3xl px-3 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-4 sm:py-6 md:pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
+          className="container mx-auto max-w-3xl px-3 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-4 sm:pt-8 md:pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
         >
           {children}
         </main>
