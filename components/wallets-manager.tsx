@@ -36,6 +36,44 @@ function formatCurrency(amount: number, currency: string = 'RUB') {
   }).format(amount)
 }
 
+type WalletRowProps = {
+  wallet: WalletType
+  onEdit: (w: WalletType) => void
+  onDelete: (id: number) => void
+}
+
+function WalletActions({
+  wallet,
+  onEdit,
+  onDelete,
+  className,
+}: WalletRowProps & { className?: string }) {
+  return (
+    <div className={className}>
+      <Button
+        variant="ghost"
+        size="icon"
+        type="button"
+        className="h-11 w-11 touch-manipulation sm:h-9 sm:w-9 md:h-8 md:w-8"
+        onClick={() => onEdit(wallet)}
+        aria-label="Редактировать кошелёк"
+      >
+        <Pencil className="h-4 w-4 shrink-0" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        type="button"
+        className="h-11 w-11 touch-manipulation text-destructive hover:text-destructive sm:h-9 sm:w-9 md:h-8 md:w-8"
+        onClick={() => onDelete(wallet.id)}
+        aria-label="Удалить кошелёк"
+      >
+        <Trash2 className="h-4 w-4 shrink-0" />
+      </Button>
+    </div>
+  )
+}
+
 export function WalletsManager({ initialWallets }: { initialWallets: WalletType[] }) {
   const router = useRouter()
   const [wallets, setWallets] = useState(initialWallets)
@@ -87,137 +125,177 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
     }
   }
 
-  return (
+  const walletForm = (
     <>
-      <div className="flex justify-stretch sm:justify-end">
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogHeader>
+        <DialogTitle>
+          {editWallet ? 'Редактировать кошелек' : 'Новый кошелек'}
+        </DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="wallet-name">Название</Label>
+          <Input
+            id="wallet-name"
+            name="name"
+            placeholder="Основной счет"
+            defaultValue={editWallet?.name}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="wallet-balance">Баланс</Label>
+          <Input
+            id="wallet-balance"
+            name="balance"
+            type="number"
+            step="0.01"
+            placeholder="0"
+            defaultValue={editWallet?.balance}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="wallet-currency">Валюта</Label>
+          <Select name="currency" defaultValue={editWallet?.currency || 'RUB'}>
+            <SelectTrigger id="wallet-currency">
+              <SelectValue placeholder="Выберите валюту" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="RUB">Рубли (RUB)</SelectItem>
+              <SelectItem value="USD">Доллары (USD)</SelectItem>
+              <SelectItem value="EUR">Евро (EUR)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Сохранение...' : 'Сохранить'}
+        </Button>
+      </form>
+    </>
+  )
+
+  return (
+    <div className="w-full min-w-0 space-y-4 sm:space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <Dialog
+          open={isOpen}
+          onOpenChange={(open) => {
+            setIsOpen(open)
+            if (!open) setEditWallet(null)
+          }}
+        >
           <DialogTrigger asChild>
-            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+            <Button
+              className="h-11 w-full gap-2 sm:h-10 sm:w-auto sm:shrink-0"
+              type="button"
+              onClick={() => setEditWallet(null)}
+            >
               <Plus className="h-4 w-4 shrink-0" />
               Добавить кошелек
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editWallet ? 'Редактировать кошелек' : 'Новый кошелек'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Название</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Основной счет"
-                  defaultValue={editWallet?.name}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="balance">Баланс</Label>
-                <Input
-                  id="balance"
-                  name="balance"
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  defaultValue={editWallet?.balance}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currency">Валюта</Label>
-                <Select name="currency" defaultValue={editWallet?.currency || 'RUB'}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите валюту" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="RUB">Рубли (RUB)</SelectItem>
-                    <SelectItem value="USD">Доллары (USD)</SelectItem>
-                    <SelectItem value="EUR">Евро (EUR)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Сохранение...' : 'Сохранить'}
-              </Button>
-            </form>
-          </DialogContent>
+          <DialogContent key={editWallet?.id ?? 'new'}>{walletForm}</DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {wallets.map((wallet) => (
-          <Card
-            key={wallet.id}
-            className="border-border bg-card overflow-hidden"
-          >
-            <CardHeader className="flex flex-row items-start justify-between gap-2 px-4 pb-2 pt-5 sm:gap-3 sm:px-6 sm:pt-6">
-              <div className="min-w-0 flex-1 pr-1 sm:pr-2">
-                <CardTitle
-                  lang="ru"
-                  className="whitespace-normal text-sm font-bold leading-snug text-foreground sm:text-base md:text-lg"
-                >
-                  <span className="wrap-break-word hyphens-auto">
-                    {wallet.name}
-                  </span>
-                </CardTitle>
-                {wallet.currency && wallet.currency !== 'RUB' ? (
-                  <p className="mt-1 text-xs text-muted-foreground wrap-break-word">
-                    {wallet.currency}
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 gap-0.5 self-start sm:gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  className="h-11 w-11 touch-manipulation sm:h-9 sm:w-9 md:h-8 md:w-8"
-                  onClick={() => {
-                    setEditWallet(wallet)
-                    setIsOpen(true)
-                  }}
-                  aria-label="Редактировать кошелёк"
-                >
-                  <Pencil className="h-4 w-4 shrink-0" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  className="h-11 w-11 touch-manipulation text-destructive hover:text-destructive sm:h-9 sm:w-9 md:h-8 md:w-8"
-                  onClick={() => handleDelete(wallet.id)}
-                  aria-label="Удалить кошелёк"
-                >
-                  <Trash2 className="h-4 w-4 shrink-0" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-5 pt-0 sm:px-6 sm:pb-6">
-              <div className="flex min-w-0 items-center gap-3 sm:gap-3.5">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 sm:h-12 sm:w-12">
-                  <Wallet className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
-                </div>
-                <p className="min-w-0 text-lg font-bold tabular-nums leading-tight sm:text-xl">
-                  {formatCurrency(Number(wallet.balance), wallet.currency)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {wallets.length === 0 && (
-        <Card className="border-border bg-card">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Wallet className="h-12 w-12 text-muted-foreground mb-4" />
+      {wallets.length === 0 ? (
+        <Card className="rounded-2xl border-border bg-card shadow-sm sm:rounded-3xl">
+          <CardContent className="flex flex-col items-center justify-center px-4 py-12 sm:px-6">
+            <Wallet className="mb-4 h-12 w-12 text-muted-foreground" />
             <p className="text-lg font-medium">Нет кошельков</p>
-            <p className="text-muted-foreground">Добавьте первый кошелек</p>
+            <p className="text-center text-muted-foreground">Добавьте первый кошелек</p>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          <div className="space-y-3 sm:hidden">
+            {wallets.map((wallet) => (
+              <div
+                key={wallet.id}
+                className="overflow-hidden rounded-2xl border border-border bg-secondary/30 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <p
+                      lang="ru"
+                      className="text-base font-bold leading-snug text-foreground wrap-break-word hyphens-auto"
+                    >
+                      {wallet.name}
+                    </p>
+                    {wallet.currency && wallet.currency !== 'RUB' ? (
+                      <p className="mt-1 text-xs text-muted-foreground wrap-break-word">
+                        {wallet.currency}
+                      </p>
+                    ) : null}
+                  </div>
+                  <WalletActions
+                    className="flex shrink-0 gap-0.5 self-start"
+                    wallet={wallet}
+                    onEdit={(w) => {
+                      setEditWallet(w)
+                      setIsOpen(true)
+                    }}
+                    onDelete={handleDelete}
+                  />
+                </div>
+                <div className="flex items-center gap-3 border-t border-border/50 bg-background/40 px-4 py-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <Wallet className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="min-w-0 text-lg font-bold tabular-nums leading-tight text-foreground">
+                    {formatCurrency(Number(wallet.balance), wallet.currency)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden gap-4 sm:grid sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
+            {wallets.map((wallet) => (
+              <Card
+                key={wallet.id}
+                className="gap-0 overflow-hidden rounded-3xl border-border bg-card py-0 shadow-sm"
+              >
+                <CardHeader className="flex flex-row items-start justify-between gap-3 px-5 pb-3 pt-5 sm:px-6 sm:pb-3 sm:pt-6">
+                  <div className="min-w-0 flex-1 pr-1">
+                    <CardTitle
+                      lang="ru"
+                      className="whitespace-normal text-base font-bold leading-snug text-foreground md:text-lg"
+                    >
+                      <span className="wrap-break-word hyphens-auto">{wallet.name}</span>
+                    </CardTitle>
+                    {wallet.currency && wallet.currency !== 'RUB' ? (
+                      <p className="mt-1 text-xs text-muted-foreground wrap-break-word">
+                        {wallet.currency}
+                      </p>
+                    ) : null}
+                  </div>
+                  <WalletActions
+                    className="flex shrink-0 gap-0.5 self-start sm:gap-1"
+                    wallet={wallet}
+                    onEdit={(w) => {
+                      setEditWallet(w)
+                      setIsOpen(true)
+                    }}
+                    onDelete={handleDelete}
+                  />
+                </CardHeader>
+                <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <Wallet className="h-6 w-6 text-primary" />
+                    </div>
+                    <p className="min-w-0 text-xl font-bold tabular-nums leading-tight text-foreground">
+                      {formatCurrency(Number(wallet.balance), wallet.currency)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
-    </>
+    </div>
   )
 }
