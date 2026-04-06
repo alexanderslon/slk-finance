@@ -207,23 +207,14 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
           const isComplete = progress >= 100
           return (
             <Card key={goal.id} className="border-border bg-card">
-              <CardHeader className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 items-center gap-2">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isComplete ? 'bg-success/10' : 'bg-primary/10'}`}
-                  >
-                    <Target className={`h-5 w-5 ${isComplete ? 'text-success' : 'text-primary'}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <CardTitle className="truncate text-base">{goal.name}</CardTitle>
-                    {goal.deadline && (
-                      <p className="text-xs text-muted-foreground">
-                        До {format(new Date(goal.deadline), 'd MMM yyyy', { locale: ru })}
-                      </p>
-                    )}
-                  </div>
+              <CardHeader className="flex flex-row items-start justify-between pb-2">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isComplete ? 'bg-success/10' : 'bg-primary/10'}`}
+                  aria-hidden
+                >
+                  <Target className={`h-5 w-5 ${isComplete ? 'text-success' : 'text-primary'}`} />
                 </div>
-                <div className="flex w-full shrink-0 justify-end gap-1 sm:w-auto sm:justify-end">
+                <div className="flex shrink-0 justify-end gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -246,6 +237,16 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <CardTitle className="line-clamp-2 text-base leading-snug sm:text-[15px]">
+                    {goal.name}
+                  </CardTitle>
+                  {goal.deadline ? (
+                    <p className="text-xs text-muted-foreground">
+                      До {format(new Date(goal.deadline), 'd MMM yyyy', { locale: ru })}
+                    </p>
+                  ) : null}
+                </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-2xl font-bold">
