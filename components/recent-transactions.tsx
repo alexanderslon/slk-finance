@@ -16,7 +16,7 @@ function formatCurrency(amount: number) {
 
 export function RecentTransactions({ transactions }: { transactions: Transaction[] }) {
   return (
-    <Card className="border-border bg-card">
+    <Card className="rounded-3xl border-border bg-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Receipt className="h-5 w-5" />

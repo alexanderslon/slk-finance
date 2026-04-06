@@ -55,18 +55,18 @@ export function AdminSidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-[56] flex w-[min(18rem,88vw)] flex-col border-r border-border bg-sidebar shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 md:shadow-none',
+          'fixed inset-y-0 left-0 z-[56] flex w-[min(18rem,88vw)] flex-col border-r border-border bg-sidebar shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 md:shadow-none lg:w-72',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{
           paddingTop: 'env(safe-area-inset-top, 0px)',
         }}
       >
-        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-4 sm:h-16 sm:px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Wallet className="h-4 w-4 text-primary-foreground" />
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border px-4 sm:h-16 sm:px-6">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary shadow-sm">
+            <Wallet className="h-[18px] w-[18px] text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold text-sidebar-foreground">Sarafan</span>
+          <span className="text-xl font-bold tracking-tight text-sidebar-foreground">Sarafan</span>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3 pb-[max(1rem,env(safe-area-inset-bottom,0px))] sm:p-4">
@@ -78,9 +78,9 @@ export function AdminSidebar({
                 href={item.href}
                 onClick={() => setIsOpen(false)}
                 className={cn(
-                  'flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors md:min-h-0 md:py-2',
+                  'flex min-h-11 items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors md:min-h-0 md:py-2.5',
                   isActive
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )}
               >
