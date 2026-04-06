@@ -294,31 +294,19 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
         })}
       </div>
 
-      {/* sm+: десктоп — шире карточки, без переносов даты по буквам */}
-      <div className="hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-3">
+      {/* sm+: десктоп — шире карточки, читаемые заголовки */}
+      <div className="hidden gap-4 sm:grid sm:grid-cols-2 2xl:grid-cols-3">
         {goals.map((goal) => {
           const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100
           const isComplete = progress >= 100
           return (
             <Card key={goal.id} className="rounded-3xl border-border bg-card">
-              <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
-                <div className="flex min-w-0 items-start gap-3">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${isComplete ? 'bg-success/10' : 'bg-primary/10'}`}
-                    aria-hidden
-                  >
-                    <Target className={`h-5 w-5 ${isComplete ? 'text-success' : 'text-primary'}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <CardTitle className="line-clamp-3 text-[15px] font-semibold leading-snug sm:text-base">
-                      {goal.name}
-                    </CardTitle>
-                    {goal.deadline ? (
-                      <p className="mt-0.5 truncate whitespace-nowrap text-xs text-muted-foreground">
-                        До {format(new Date(goal.deadline), 'd MMM yyyy', { locale: ru })}
-                      </p>
-                    ) : null}
-                  </div>
+              <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${isComplete ? 'bg-success/10' : 'bg-primary/10'}`}
+                  aria-hidden
+                >
+                  <Target className={`h-5 w-5 ${isComplete ? 'text-success' : 'text-primary'}`} />
                 </div>
                 <div className="flex shrink-0 justify-end gap-1">
                   <Button
@@ -342,23 +330,33 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-2xl font-bold tabular-nums">
+              <CardContent className="space-y-4 px-6 pb-6 pt-0">
+                <div className="space-y-1">
+                  <CardTitle className="line-clamp-2 text-lg font-semibold leading-snug">
+                    {goal.name}
+                  </CardTitle>
+                  {goal.deadline ? (
+                    <p className="text-sm text-muted-foreground">
+                      До {format(new Date(goal.deadline), 'd MMMM yyyy', { locale: ru })}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex items-end justify-between gap-3">
+                  <p className="text-3xl font-bold tabular-nums">
                     {formatCurrency(Number(goal.current_amount))}
                   </p>
-                  <p
-                    className={`text-sm font-medium tabular-nums ${isComplete ? 'text-success' : 'text-muted-foreground'}`}
-                  >
+                  <p className={`text-sm font-semibold tabular-nums ${isComplete ? 'text-success' : 'text-muted-foreground'}`}>
                     {Math.round(progress)}%
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
                   <Progress value={Math.min(progress, 100)} className="h-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Цель: {formatCurrency(Number(goal.target_amount))}
-                  </p>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{formatCurrency(Number(goal.current_amount))}</span>
+                    <span>Цель: {formatCurrency(Number(goal.target_amount))}</span>
+                  </div>
                 </div>
 
                 {!isComplete && (
