@@ -105,29 +105,33 @@ export function DebtsManager({ initialDebts }: { initialDebts: Debt[] }) {
   function DebtCard({ debt }: { debt: Debt }) {
     const isGiven = debt.type === 'given'
     return (
-      <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-4">
-        <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isGiven ? 'bg-success/10' : 'bg-destructive/10'}`}>
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-secondary/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3 sm:items-center">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isGiven ? 'bg-success/10' : 'bg-destructive/10'}`}
+          >
             <CreditCard className={`h-5 w-5 ${isGiven ? 'text-success' : 'text-destructive'}`} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-medium">{debt.debtor_name}</p>
+          <div className="min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="truncate font-medium">{debt.debtor_name}</p>
               {debt.is_paid && <Badge variant="outline" className="text-success border-success">Оплачен</Badge>}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground wrap-break-word">
               {isGiven ? 'Дали в долг' : 'Взяли в долг'}
               {debt.due_date && ` | До ${format(new Date(debt.due_date), 'd MMM yyyy', { locale: ru })}`}
             </p>
-            {debt.description && <p className="text-sm text-muted-foreground mt-1">{debt.description}</p>}
+            {debt.description && (
+              <p className="mt-1 text-sm text-muted-foreground wrap-break-word">{debt.description}</p>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
           <p className={`text-lg font-semibold ${isGiven ? 'text-success' : 'text-destructive'}`}>
             {formatCurrency(Number(debt.amount))}
           </p>
           {!debt.is_paid && (
-            <div className="flex gap-1 ml-2">
+            <div className="ml-2 flex shrink-0 gap-1">
               <Button
                 variant="ghost"
                 size="icon"
