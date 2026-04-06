@@ -198,7 +198,7 @@ export function TransactionsManager({
 
   function renderMobileCards(items: Transaction[]) {
     return (
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 lg:hidden">
         {items.map((t) => (
           <div
             key={t.id}
@@ -438,7 +438,7 @@ export function TransactionsManager({
                       </span>
                     </div>
                     {renderMobileCards(rows)}
-                    <div className="hidden overflow-x-auto rounded-md border border-border md:block">
+                    <div className="hidden overflow-x-auto rounded-md border border-border lg:block">
                       <Table className="min-w-[720px]">
                         <TableHeader>
                           <TableRow>
