@@ -148,14 +148,14 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
         </Dialog>
       </div>
 
-      <Card className="border-border bg-card">
+      <Card className="rounded-3xl border-border bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Работники ({workers.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-6 pb-6">
           {workers.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Нет работников</p>
           ) : (
@@ -164,11 +164,11 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                 {workers.map((worker) => (
                   <div
                     key={worker.id}
-                    className="rounded-xl border border-border bg-secondary/30 p-4"
+                    className="rounded-2xl border border-border bg-secondary/30 p-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-semibold">{worker.name}</p>
+                        <p className="line-clamp-2 font-semibold leading-snug">{worker.name}</p>
                         <p className="text-sm text-muted-foreground">{worker.position || '—'}</p>
                         {worker.phone ? (
                           <p className="mt-1 font-mono text-sm tabular-nums">{worker.phone}</p>
@@ -178,6 +178,7 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-9 w-9"
                           onClick={() => {
                             setEditWorker(worker)
                             setIsOpen(true)
@@ -188,14 +189,14 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive hover:text-destructive"
+                          className="h-9 w-9 text-destructive hover:text-destructive"
                           onClick={() => handleDelete(worker.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3 text-sm">
+                    <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
                       <div>
                         <p className="text-muted-foreground">Зарплата</p>
                         <p className="font-medium tabular-nums">
