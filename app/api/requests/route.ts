@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { estimatePartnerRequestBonus } from '@/lib/partner-bonus'
+import { notifyNewPartnerRequest } from '@/lib/telegram'
 
 async function ensureExpenseCategory(name: string): Promise<number> {
   const rows = await sql`SELECT id FROM categories WHERE name = ${name} AND type = 'expense' LIMIT 1`
@@ -92,7 +93,21 @@ export async function POST(request: NextRequest) {
       RETURNING *
     `
 
-    return NextResponse.json(result[0])
+    const created = result[0]
+
+    // Telegram: fire-and-forget. Не ломаем основной запрос, если Telegram недоступен.
+    void notifyNewPartnerRequest({
+      requestId: Number(created.id),
+      partnerName: String(user.partner_name || `Partner #${user.partner_id}`),
+      amountRub: Number(created.amount || 0),
+      squareMeters: created.square_meters ?? null,
+      customerPhone: String(created.customer_phone),
+      address: created.address ?? null,
+      workComment: created.work_comment ?? null,
+      status: created.status,
+    })
+
+    return NextResponse.json(created)
   } catch (error) {
     console.error('Error creating request:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
