@@ -2,12 +2,10 @@
 
 import { usePartnerUi } from '@/contexts/partner-ui-context'
 import { Button } from '@/components/ui/button'
-import { Home, Plus, List, LogOut } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Home, Plus, List } from 'lucide-react'
 
 export function PartnerMobileNav() {
   const { setNewRequestOpen } = usePartnerUi()
-  const router = useRouter()
 
   return (
     <nav
@@ -45,19 +43,6 @@ export function PartnerMobileNav() {
         >
           <List className="h-5 w-5" />
           Список
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="flex h-14 min-h-[56px] flex-1 flex-col gap-0.5 rounded-xl py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-          onClick={async () => {
-            await fetch('/api/auth/logout', { method: 'POST' })
-            router.push('/')
-            router.refresh()
-          }}
-        >
-          <LogOut className="h-5 w-5" />
-          Выход
         </Button>
       </div>
     </nav>
