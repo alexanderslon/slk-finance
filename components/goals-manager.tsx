@@ -207,7 +207,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
           const isComplete = progress >= 100
           return (
             <Card key={goal.id} className="border-border bg-card">
-              <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-start sm:justify-between">
+              <CardHeader className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-center gap-2">
                   <div
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isComplete ? 'bg-success/10' : 'bg-primary/10'}`}
@@ -223,7 +223,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
                     )}
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-1 sm:justify-end">
+                <div className="flex w-full shrink-0 justify-end gap-1 sm:w-auto sm:justify-end">
                   <Button
                     variant="ghost"
                     size="icon"
