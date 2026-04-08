@@ -288,8 +288,8 @@ export function PartnerDashboard({
   }
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6">
-      <div className="order-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-xl font-bold leading-tight sm:text-2xl">Мои заявки</h1>
           <p className="text-sm text-muted-foreground sm:text-base">
@@ -872,7 +872,7 @@ export function PartnerDashboard({
         </Drawer>
       </div>
 
-      <div className="order-2 space-y-2">
+      <div className="space-y-2">
         <p className="text-sm font-medium text-foreground">Сводка</p>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {[
@@ -929,7 +929,7 @@ export function PartnerDashboard({
         </div>
       </div>
 
-      <div className="order-3 space-y-2">
+      <div className="space-y-2">
         <p className="text-sm font-medium text-foreground">Категории</p>
         <p className="text-xs text-muted-foreground sm:text-sm">
           Выберите тип работы — откроется форма заявки
@@ -962,10 +962,7 @@ export function PartnerDashboard({
         </div>
       </div>
 
-      <Card
-        id="partner-requests-history"
-        className="order-5 border-border bg-card scroll-mt-4 md:order-4"
-      >
+      <Card id="partner-requests-history" className="scroll-mt-4 border-border bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -1051,9 +1048,7 @@ export function PartnerDashboard({
         </CardContent>
       </Card>
 
-      <div className="order-4 md:order-5">
-        <PartnerHelpCard profilePhone={partnerPhone ?? null} />
-      </div>
+      <PartnerHelpCard profilePhone={partnerPhone ?? null} />
     </div>
   )
 }
