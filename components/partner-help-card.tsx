@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Phone, Send, ChevronDown, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import {
   partnerHelpTelegramHref,
 } from '@/lib/partner-support-links'
 import { cn } from '@/lib/utils'
+import { usePartnerUi } from '@/contexts/partner-ui-context'
 
 function initialPhoneFromProfile(profilePhone: string | null | undefined) {
   const d = ruPhoneDigits(profilePhone || '')
@@ -35,6 +36,7 @@ export function PartnerHelpCard({
 }) {
   const telegramHref = partnerHelpTelegramHref()
   const mailHref = partnerHelpMailtoHref()
+  const { registerOpenPartnerHelpForm } = usePartnerUi()
 
   const profileDigits = ruPhoneDigits(profilePhone || '')
   const hasProfilePhone = isCompleteRuMobile(profileDigits)
@@ -48,6 +50,17 @@ export function PartnerHelpCard({
   const [formSuccess, setFormSuccess] = useState(false)
 
   const skipPhoneInForm = hasProfilePhone && !useOtherPhone
+
+  useEffect(() => {
+    registerOpenPartnerHelpForm(() => {
+      document.getElementById('partner-help-feedback')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+      window.setTimeout(() => setFormOpen(true), 320)
+    })
+    return () => registerOpenPartnerHelpForm(null)
+  }, [registerOpenPartnerHelpForm])
 
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -90,7 +103,10 @@ export function PartnerHelpCard({
   }
 
   return (
-    <Card className="border-success/30 bg-gradient-to-b from-success/[0.06] to-card shadow-sm dark:from-success/10 dark:to-card">
+    <Card
+      id="partner-help-feedback"
+      className="scroll-mt-[max(5.5rem,env(safe-area-inset-top,0px))] border-success/30 bg-gradient-to-b from-success/[0.06] to-card shadow-sm dark:from-success/10 dark:to-card"
+    >
       <CardHeader className="pb-2">
         <CardTitle className="text-base leading-snug sm:text-lg">
           Нужна помощь по бонусам или заявкам?

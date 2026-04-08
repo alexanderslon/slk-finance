@@ -2,11 +2,11 @@
 
 import { usePartnerUi } from '@/contexts/partner-ui-context'
 import { Button } from '@/components/ui/button'
-import { Home, Plus, List } from 'lucide-react'
+import { Home, Plus, List, MessageCircle } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export function PartnerMobileNav() {
-  const { openGenericNewRequest } = usePartnerUi()
+  const { openGenericNewRequest, openPartnerHelpForm } = usePartnerUi()
 
   return (
     <nav
@@ -44,6 +44,16 @@ export function PartnerMobileNav() {
         >
           <List className="h-5 w-5" />
           Список
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="flex h-14 min-h-[56px] flex-1 flex-col gap-0.5 rounded-xl py-1 text-[11px] font-medium leading-tight text-muted-foreground hover:text-foreground"
+          onClick={() => openPartnerHelpForm()}
+        >
+          <MessageCircle className="h-5 w-5 shrink-0" />
+          Вопрос
         </Button>
 
         <ThemeToggle variant="outline" />
