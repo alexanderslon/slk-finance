@@ -34,6 +34,7 @@ export default async function PartnerPage() {
       categories={categories}
       partnerId={user.partner_id}
       partnerName={user.partner_name}
+      partnerPhone={user.partner_phone ?? null}
       bonusBalance={bonusBalance}
     />
   )

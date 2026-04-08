@@ -216,3 +216,33 @@ export async function notifyNewPartnerRegistration(
   })
 }
 
+/**
+ * Вопрос в поддержку из кабинета партнёра.
+ * TELEGRAM_SUPPORT_THREAD_ID — опционально (тема форума), иначе в общий чат.
+ */
+export async function notifyPartnerSupportQuestion(payload: {
+  phone: string
+  question: string
+  partnerName: string
+  partnerId: number
+}): Promise<void> {
+  const supportThreadId = parsePositiveInt(envTrim('TELEGRAM_SUPPORT_THREAD_ID'))
+
+  const lines: string[] = [
+    `📩 <b>Вопрос из кабинета партнёра</b>`,
+    ``,
+    `<b>Партнёр:</b> ${escapeHtml(payload.partnerName)} <code>#${payload.partnerId}</code>`,
+    `<b>Телефон для связи:</b> ${escapeHtml(payload.phone)}`,
+    ``,
+    `<b>Вопрос:</b>`,
+    escapeHtml(payload.question),
+  ]
+
+  await sendTelegramNotification({
+    title: 'Поддержка · партнёр',
+    html: `\n${lines.join('\n')}`,
+    threadId: supportThreadId ?? undefined,
+    timeoutMs: 2500,
+  })
+}
+

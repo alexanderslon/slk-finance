@@ -43,6 +43,7 @@ import {
   PARTNER_SQM_SELECT_OPTIONS,
 } from '@/lib/partner-bonus'
 import { cn } from '@/lib/utils'
+import { PartnerHelpCard } from '@/components/partner-help-card'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -146,12 +147,14 @@ export function PartnerDashboard({
   categories: _categories,
   partnerId: _partnerId,
   partnerName,
+  partnerPhone,
   bonusBalance,
 }: {
   requests: PartnerRequest[]
   categories: Category[]
   partnerId: number
   partnerName: string
+  partnerPhone?: string | null
   bonusBalance: number
 }) {
   const router = useRouter()
@@ -1044,6 +1047,8 @@ export function PartnerDashboard({
           )}
         </CardContent>
       </Card>
+
+      <PartnerHelpCard profilePhone={partnerPhone ?? null} />
     </div>
   )
 }
