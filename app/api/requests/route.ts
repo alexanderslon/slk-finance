@@ -66,8 +66,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { customer_phone, address, work_comment, work_volume, recommended_specialist } = body
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Некорректное тело запроса' }, { status: 400 })
+    }
+    const {
+      customer_phone,
+      address,
+      work_comment,
+      work_volume,
+      recommended_specialist,
+      category_name,
+    } = body as Record<string, unknown>
     const rawSqm = body.square_meters
     let squareMeters: number | null = null
     if (rawSqm !== undefined && rawSqm !== null && rawSqm !== '') {
@@ -81,15 +93,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!customer_phone) {
+    if (!customer_phone || typeof customer_phone !== 'string') {
       return NextResponse.json({ error: 'Укажите номер заказчика' }, { status: 400 })
     }
 
-    const categoryId = await ensureExpenseCategory('Сантехника')
+    const categoryName =
+      typeof category_name === 'string' && category_name.trim()
+        ? String(category_name).trim().slice(0, 255)
+        : 'Сантехника'
 
-    // Совместимость с БД, где ещё нет новых колонок work_volume/recommended_specialist:
-    // сначала пробуем новый INSERT, если получаем "column does not exist" — откатываемся на старый.
-    let result: any[]
+    const categoryId = await ensureExpenseCategory(categoryName)
+
+    const wVol = typeof work_volume === 'string' && work_volume.trim() ? work_volume.trim() : null
+    const wRec =
+      typeof recommended_specialist === 'string' && recommended_specialist.trim()
+        ? recommended_specialist.trim()
+        : null
+    const wCom = typeof work_comment === 'string' && work_comment.trim() ? work_comment.trim() : null
+    const addr = typeof address === 'string' && address.trim() ? address.trim() : null
+
+    /** Пошагово упрощаем INSERT, если в БД нет части колонок (старые миграции). */
+    let result: Awaited<ReturnType<typeof sql>>
     try {
       result = await sql`
         INSERT INTO partner_requests (partner_id, category_id, amount, work_volume, recommended_specialist, work_comment, customer_phone, address, square_meters)
@@ -97,52 +121,69 @@ export async function POST(request: NextRequest) {
           ${user.partner_id},
           ${categoryId},
           0,
-          ${work_volume || null},
-          ${recommended_specialist || null},
-          ${work_comment || null},
+          ${wVol},
+          ${wRec},
+          ${wCom},
           ${customer_phone},
-          ${address || null},
+          ${addr},
           ${squareMeters}
         )
         RETURNING *
       `
-    } catch (err) {
-      const msg = String((err as any)?.message || err)
-      const missingColumn =
-        msg.includes('work_volume') ||
-        msg.includes('recommended_specialist') ||
-        msg.toLowerCase().includes('column') && msg.toLowerCase().includes('does not exist')
-      if (!missingColumn) throw err
+    } catch (firstErr) {
+      const msg = String((firstErr as Error)?.message || firstErr)
+      const maybeMissingColumn =
+        /does not exist|42703|column/i.test(msg) &&
+        /partner_requests|work_volume|recommended|square_meters|address/i.test(msg)
+      if (!maybeMissingColumn) throw firstErr
 
-      console.warn('[requests] DB schema missing new columns; falling back to legacy insert')
-      result = await sql`
-        INSERT INTO partner_requests (partner_id, category_id, amount, work_comment, customer_phone, address, square_meters)
-        VALUES (${user.partner_id}, ${categoryId}, 0, ${work_comment || null}, ${customer_phone}, ${address || null}, ${squareMeters})
-        RETURNING *
-      `
+      console.warn('[requests POST] full insert failed, retrying without work_volume/recommended:', msg)
+      try {
+        result = await sql`
+          INSERT INTO partner_requests (partner_id, category_id, amount, work_comment, customer_phone, address, square_meters)
+          VALUES (${user.partner_id}, ${categoryId}, 0, ${wCom}, ${customer_phone}, ${addr}, ${squareMeters})
+          RETURNING *
+        `
+      } catch (secondErr) {
+        const msg2 = String((secondErr as Error)?.message || secondErr)
+        console.warn('[requests POST] legacy insert failed, retrying without square_meters:', msg2)
+        result = await sql`
+          INSERT INTO partner_requests (partner_id, category_id, amount, work_comment, customer_phone, address)
+          VALUES (${user.partner_id}, ${categoryId}, 0, ${wCom}, ${customer_phone}, ${addr})
+          RETURNING *
+        `
+      }
     }
 
     const created = result[0]
 
     // Telegram: не ломаем основной запрос, если Telegram недоступен.
     // На serverless лучше дождаться короткой попытки отправки, иначе процесс может завершиться раньше.
-    await notifyNewPartnerRequest({
-      requestId: Number(created.id),
-      partnerName: String(user.partner_name || `Partner #${user.partner_id}`),
-      amountRub: Number(created.amount || 0),
-      squareMeters: created.square_meters ?? null,
-      customerPhone: String(created.customer_phone),
-      address: created.address ?? null,
-      workVolume: created.work_volume ?? null,
-      recommendedSpecialist: created.recommended_specialist ?? null,
-      workComment: created.work_comment ?? null,
-      status: created.status,
-    })
+    try {
+      await notifyNewPartnerRequest({
+        requestId: Number(created.id),
+        partnerName: String(user.partner_name || `Partner #${user.partner_id}`),
+        amountRub: Number(created.amount || 0),
+        squareMeters: created.square_meters ?? null,
+        customerPhone: String(created.customer_phone),
+        address: created.address ?? null,
+        workVolume: created.work_volume ?? wVol,
+        recommendedSpecialist: created.recommended_specialist ?? wRec,
+        workComment: created.work_comment ?? wCom,
+        status: created.status,
+      })
+    } catch (notifyErr) {
+      console.error('[requests POST] notifyNewPartnerRequest failed (заявка уже создана):', notifyErr)
+    }
 
     return NextResponse.json(created)
   } catch (error) {
     console.error('Error creating request:', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    const detail =
+      process.env.NODE_ENV !== 'production'
+        ? { detail: String((error as Error)?.message || error) }
+        : {}
+    return NextResponse.json({ error: 'Server error', ...detail }, { status: 500 })
   }
 }
 
@@ -153,40 +194,80 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id, status, admin_comment, wallet_id } = await request.json()
+    const { id, status, admin_comment, wallet_id, actual_work_volume } = await request.json()
+    const actualVol =
+      typeof actual_work_volume === 'string' && actual_work_volume.trim() !== ''
+        ? actual_work_volume.trim()
+        : null
 
-    const before = await sql`SELECT * FROM partner_requests WHERE id = ${id}`
+    const before = await sql`
+      SELECT pr.*, c.name AS category_name
+      FROM partner_requests pr
+      JOIN categories c ON c.id = pr.category_id
+      WHERE pr.id = ${id}
+    `
     const prev = before[0]
     if (!prev) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const approvedTotal =
-      status === 'approved' ? estimatePartnerRequestBonus(prev.square_meters) : Number(prev.amount)
+      status === 'approved'
+        ? estimatePartnerRequestBonus(prev.square_meters, prev.category_name)
+        : Number(prev.amount)
 
     // Update request status (сумма заявки = итоговый бонус при одобрении: база + м²)
-    const result = await sql`
-      UPDATE partner_requests
-      SET status = ${status}, admin_comment = ${admin_comment}, updated_at = NOW(),
-          amount = ${approvedTotal}
-      WHERE id = ${id}
-      RETURNING *
-    `
+    let result: Awaited<ReturnType<typeof sql>>
+    try {
+      result = await sql`
+        UPDATE partner_requests
+        SET status = ${status},
+            admin_comment = ${admin_comment},
+            actual_work_volume = ${actualVol},
+            updated_at = NOW(),
+            amount = ${approvedTotal}
+        WHERE id = ${id}
+        RETURNING *
+      `
+    } catch (updErr) {
+      const msg = String((updErr as Error)?.message || updErr)
+      const missingActualVol =
+        /actual_work_volume|does not exist|42703/i.test(msg) &&
+        /partner_requests|column/i.test(msg)
+      if (!missingActualVol) throw updErr
+      console.warn('[requests PUT] actual_work_volume column missing; updating without it:', msg)
+      result = await sql`
+        UPDATE partner_requests
+        SET status = ${status},
+            admin_comment = ${admin_comment},
+            updated_at = NOW(),
+            amount = ${approvedTotal}
+        WHERE id = ${id}
+        RETURNING *
+      `
+    }
 
     // If approved, create expense transaction
     let bonusAwarded = 0
-    if (status === 'approved' && wallet_id) {
+    const walletIdNum = Number(wallet_id)
+    const walletOk =
+      status === 'approved' &&
+      wallet_id != null &&
+      Number.isFinite(walletIdNum) &&
+      walletIdNum > 0
+
+    if (walletOk) {
       const req = result[0]
 
       // Create expense transaction
       await sql`
         INSERT INTO transactions (wallet_id, category_id, type, amount, description, partner_id)
-        VALUES (${wallet_id}, ${req.category_id}, 'expense', ${req.amount}, 
+        VALUES (${walletIdNum}, ${req.category_id}, 'expense', ${req.amount}, 
                 ${'Заявка от партнёра'}, ${req.partner_id})
       `
 
       // Update wallet balance
-      await sql`UPDATE wallets SET balance = balance - ${req.amount} WHERE id = ${wallet_id}`
+      await sql`UPDATE wallets SET balance = balance - ${req.amount} WHERE id = ${walletIdNum}`
 
-      // Начислить партнёру тот же итог, что и в заявке (1000 + 1000×м²), только при первом одобрении
+      // Начислить партнёру тот же итог, что и в заявке (по правилам estimatePartnerRequestBonus), только при первом одобрении
       if (prev.status !== 'approved') {
         bonusAwarded = Number(req.amount)
         await sql`
@@ -200,6 +281,10 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ...result[0], bonusAwarded })
   } catch (error) {
     console.error('Error updating request:', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    const detail =
+      process.env.NODE_ENV !== 'production'
+        ? { detail: String((error as Error)?.message || error) }
+        : {}
+    return NextResponse.json({ error: 'Server error', ...detail }, { status: 500 })
   }
 }

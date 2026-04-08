@@ -1,8 +1,10 @@
 import { sql } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { PartnerDashboard } from '@/components/partner-dashboard'
+import { ensureDefaultExpenseCategories } from '@/lib/categories'
 
 async function getData(partnerId: number) {
+  await ensureDefaultExpenseCategories()
   const [requests, categories, partners] = await Promise.all([
     sql`
       SELECT pr.*, c.name as category_name
@@ -31,6 +33,7 @@ export default async function PartnerPage() {
       requests={requests}
       categories={categories}
       partnerId={user.partner_id}
+      partnerName={user.partner_name}
       bonusBalance={bonusBalance}
     />
   )

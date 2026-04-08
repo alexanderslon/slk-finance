@@ -302,7 +302,7 @@ export function TransactionsManager({
               <div className="min-w-0 space-y-2">
                 <Label htmlFor="wallet_id">Кошелек</Label>
                 <Select name="wallet_id" defaultValue={editTransaction?.wallet_id?.toString()} required>
-                  <SelectTrigger className="h-11 w-full min-w-0 max-w-full sm:h-10">
+                  <SelectTrigger className="h-11 w-full min-w-0 max-w-full transition-colors data-placeholder:border-sky-400 data-placeholder:bg-sky-50/60 data-placeholder:text-slate-900 dark:data-placeholder:border-sky-500 dark:data-placeholder:bg-sky-950/30 dark:data-placeholder:text-slate-100 sm:h-10">
                     <SelectValue placeholder="Выберите кошелек" />
                   </SelectTrigger>
                   <SelectContent>

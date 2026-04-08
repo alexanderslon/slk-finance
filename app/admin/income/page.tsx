@@ -1,7 +1,9 @@
 import { sql } from '@/lib/db'
 import { TransactionsManager } from '@/components/transactions-manager'
+import { ensureDefaultIncomeCategories } from '@/lib/categories'
 
 async function getData() {
+  await ensureDefaultIncomeCategories()
   const [transactions, wallets, categories, partners, workers] = await Promise.all([
     sql`
       SELECT t.*, c.name as category_name, w.name as wallet_name,

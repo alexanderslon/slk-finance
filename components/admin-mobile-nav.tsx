@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sheet'
 import { Menu } from 'lucide-react'
 import { useState } from 'react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function AdminMobileNav({ pendingRequests }: { pendingRequests: number }) {
   const pathname = usePathname()
@@ -71,8 +72,9 @@ export function AdminMobileNav({ pendingRequests }: { pendingRequests: number })
             </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-[env(safe-area-inset-bottom,0px)]">
-            <SheetHeader className="border-b border-border px-4 pb-3 text-left">
-              <SheetTitle>Разделы</SheetTitle>
+            <SheetHeader className="flex flex-row items-center justify-between gap-3 border-b border-border px-4 pb-3 text-left">
+              <SheetTitle className="min-w-0 flex-1">Разделы</SheetTitle>
+              <ThemeToggle variant="outline" />
             </SheetHeader>
             <div className="max-h-[min(70dvh,520px)] overflow-y-auto px-2 py-2">
               {secondary.map((item) => {

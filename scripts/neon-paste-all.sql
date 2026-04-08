@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS partner_requests (
   square_meters DECIMAL(12, 2),
   status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   admin_comment TEXT,
+  actual_work_volume TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -244,6 +245,10 @@ WHERE pu.partner_id = p.id
 -- --- 006-partner-requests-square-meters.sql ---------------------------------
 
 ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS square_meters DECIMAL(12, 2);
+
+-- --- 007-partner-requests-actual-work-volume.sql ----------------------------
+
+ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS actual_work_volume TEXT;
 
 -- =============================================================================
 -- Готово. Дальше: Vercel → DATABASE_URL (Pooled), затем POST /api/setup с Bearer SETUP_SECRET

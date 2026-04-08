@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS partner_requests (
   square_meters DECIMAL(12, 2),
   status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   admin_comment TEXT,
+  actual_work_volume TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

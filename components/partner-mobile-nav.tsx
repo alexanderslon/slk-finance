@@ -3,9 +3,10 @@
 import { usePartnerUi } from '@/contexts/partner-ui-context'
 import { Button } from '@/components/ui/button'
 import { Home, Plus, List } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function PartnerMobileNav() {
-  const { setNewRequestOpen } = usePartnerUi()
+  const { openGenericNewRequest } = usePartnerUi()
 
   return (
     <nav
@@ -28,7 +29,7 @@ export function PartnerMobileNav() {
           type="button"
           variant="default"
           className="flex h-14 min-h-[56px] flex-1 flex-col gap-0.5 rounded-xl bg-primary py-1 text-xs font-semibold shadow-md"
-          onClick={() => setNewRequestOpen(true)}
+          onClick={() => openGenericNewRequest()}
         >
           <Plus className="h-6 w-6" strokeWidth={2.5} />
           Заявка
@@ -44,6 +45,8 @@ export function PartnerMobileNav() {
           <List className="h-5 w-5" />
           Список
         </Button>
+
+        <ThemeToggle variant="outline" />
       </div>
     </nav>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -53,20 +53,44 @@ export function RequestsManager({
   const [selectedRequest, setSelectedRequest] = useState<PartnerRequest | null>(null)
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null)
   const [loading, setLoading] = useState(false)
+  /** Radix Select не участвует в FormData — значение кошелька держим здесь и дублируем в hidden input */
+  const [approveWalletId, setApproveWalletId] = useState('')
+  const [actionError, setActionError] = useState('')
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length
+
+  useEffect(() => {
+    setActionError('')
+    if (actionType === 'approve') setApproveWalletId('')
+  }, [selectedRequest?.id, actionType])
 
   async function handleAction(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!selectedRequest || !actionType) return
+    setActionError('')
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
+    const rawActualVol = String(formData.get('actual_work_volume') || '').trim()
+
+    let walletId: number | null = null
+    if (actionType === 'approve') {
+      const raw = formData.get('wallet_id')
+      const n = Number(raw)
+      if (raw == null || raw === '' || !Number.isFinite(n) || n <= 0) {
+        setActionError('Выберите кошелёк для списания')
+        setLoading(false)
+        return
+      }
+      walletId = n
+    }
+
     const data = {
       id: selectedRequest.id,
       status: actionType === 'approve' ? 'approved' : 'rejected',
-      admin_comment: formData.get('admin_comment') as string || null,
-      wallet_id: actionType === 'approve' ? Number(formData.get('wallet_id')) : null,
+      admin_comment: (formData.get('admin_comment') as string) || null,
+      actual_work_volume: rawActualVol || null,
+      wallet_id: walletId,
     }
 
     try {
@@ -79,8 +103,21 @@ export function RequestsManager({
       if (res.ok) {
         setSelectedRequest(null)
         setActionType(null)
+        setApproveWalletId('')
         router.refresh()
+      } else {
+        let message = 'Не удалось сохранить решение'
+        try {
+          const j = (await res.json()) as { error?: string; detail?: string }
+          if (j?.error) message = String(j.error)
+          if (j?.detail) message += ` — ${String(j.detail)}`
+        } catch {
+          /* ignore */
+        }
+        setActionError(message)
       }
+    } catch {
+      setActionError('Ошибка сети. Проверьте подключение и попробуйте снова.')
     } finally {
       setLoading(false)
     }
@@ -88,12 +125,17 @@ export function RequestsManager({
 
   return (
     <>
-      <Dialog open={!!selectedRequest && !!actionType} onOpenChange={(open) => {
-        if (!open) {
-          setSelectedRequest(null)
-          setActionType(null)
-        }
-      }}>
+      <Dialog
+        open={!!selectedRequest && !!actionType}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedRequest(null)
+            setActionType(null)
+            setActionError('')
+            setApproveWalletId('')
+          }
+        }}
+      >
         <DialogContent className="max-sm:p-4">
           <DialogHeader className="min-w-0 pr-8 text-left">
             <DialogTitle className="break-words text-base leading-snug sm:text-lg">
@@ -141,12 +183,23 @@ export function RequestsManager({
                     </span>
                   </div>
                 )}
+                {selectedRequest.work_volume ? (
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">Объём в заявке</span>
+                    <p className="mt-1 break-words text-sm font-medium">{selectedRequest.work_volume}</p>
+                  </div>
+                ) : null}
                 <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                   <span className="min-w-0 text-muted-foreground sm:max-w-[55%]">
                     Предположительный бонус
                   </span>
                   <span className="min-w-0 font-medium tabular-nums sm:text-right">
-                    {formatCurrency(estimatePartnerRequestBonus(selectedRequest.square_meters))}
+                    {formatCurrency(
+                      estimatePartnerRequestBonus(
+                        selectedRequest.square_meters,
+                        selectedRequest.category_name ?? null,
+                      ),
+                    )}
                   </span>
                 </div>
                 {selectedRequest.work_comment && (
@@ -160,9 +213,14 @@ export function RequestsManager({
               {actionType === 'approve' && (
                 <div className="min-w-0 space-y-2">
                   <Label htmlFor="wallet_id">Списать с кошелька</Label>
-                  <Select name="wallet_id" required>
-                    <SelectTrigger className="h-11 w-full min-w-0 max-w-full sm:h-10">
-                      <SelectValue placeholder="Выберите кошелек" />
+                  <input type="hidden" name="wallet_id" value={approveWalletId} readOnly />
+                  <Select
+                    value={approveWalletId || undefined}
+                    onValueChange={setApproveWalletId}
+                    required
+                  >
+                    <SelectTrigger id="wallet_id" className="h-11 w-full min-w-0 max-w-full sm:h-10">
+                      <SelectValue placeholder="Выберите кошелёк" />
                     </SelectTrigger>
                     <SelectContent>
                       {wallets.map((w) => (
@@ -176,7 +234,20 @@ export function RequestsManager({
               )}
 
               <div className="min-w-0 space-y-2">
-                <Label htmlFor="admin_comment">Комментарий</Label>
+                <Label htmlFor="actual_work_volume">Фактический объём работ</Label>
+                <Textarea
+                  id="actual_work_volume"
+                  name="actual_work_volume"
+                  placeholder="Например: монтаж по факту, доработки, уточнённый перечень"
+                  className="min-h-[80px] w-full min-w-0 max-w-full text-base sm:min-h-[72px] sm:text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Сохранится в заявке и будет виден партнёру в истории.
+                </p>
+              </div>
+
+              <div className="min-w-0 space-y-2">
+                <Label htmlFor="admin_comment">Комментарий к решению</Label>
                 <Textarea
                   id="admin_comment"
                   name="admin_comment"
@@ -184,6 +255,12 @@ export function RequestsManager({
                   className="min-h-[88px] w-full min-w-0 max-w-full text-base sm:min-h-[80px] sm:text-sm"
                 />
               </div>
+
+              {actionError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {actionError}
+                </p>
+              ) : null}
 
               <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                 <Button
@@ -193,6 +270,8 @@ export function RequestsManager({
                   onClick={() => {
                     setSelectedRequest(null)
                     setActionType(null)
+                    setActionError('')
+                    setApproveWalletId('')
                   }}
                 >
                   Отмена
@@ -264,7 +343,13 @@ export function RequestsManager({
                           {request.square_meters != null && Number(request.square_meters) > 0
                             ? `${Math.floor(Number(request.square_meters))} м² · `
                             : ''}
-                          бонус ~{formatCurrency(estimatePartnerRequestBonus(request.square_meters))}
+                          бонус ~
+                          {formatCurrency(
+                            estimatePartnerRequestBonus(
+                              request.square_meters,
+                              request.category_name ?? null,
+                            ),
+                          )}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(request.created_at), 'd MMM yyyy, HH:mm', { locale: ru })}
@@ -301,6 +386,11 @@ export function RequestsManager({
                             Отклонить
                           </Button>
                         </div>
+                      )}
+                      {request.actual_work_volume && (
+                        <p className="line-clamp-2 min-w-0 break-words text-sm text-muted-foreground sm:max-w-[200px]">
+                          Факт: {request.actual_work_volume}
+                        </p>
                       )}
                       {request.admin_comment && (
                         <p className="line-clamp-2 min-w-0 break-words text-sm text-muted-foreground sm:max-w-[200px]">

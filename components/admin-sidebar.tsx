@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
 import { ADMIN_NAV_ITEMS } from '@/lib/admin-nav'
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/branding'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function AdminSidebar({
   username,
@@ -33,7 +34,7 @@ export function AdminSidebar({
       <Button
         variant="outline"
         size="icon"
-        className="fixed z-[60] h-11 w-11 rounded-lg border-border bg-card shadow-sm md:hidden"
+        className="fixed z-60 h-11 w-11 rounded-lg border-border bg-card shadow-sm md:hidden"
         style={{
           top: 'max(0.75rem, env(safe-area-inset-top, 0px))',
           left: 'max(0.75rem, env(safe-area-inset-left, 0px))',
@@ -47,7 +48,7 @@ export function AdminSidebar({
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[55] bg-background/80 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-55 bg-background/80 backdrop-blur-sm md:hidden"
           onClick={() => setIsOpen(false)}
           aria-hidden
         />
@@ -56,7 +57,7 @@ export function AdminSidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-[56] flex w-[min(18rem,88vw)] flex-col border-r border-border bg-sidebar shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 md:shadow-none lg:w-72',
+          'fixed inset-y-0 left-0 z-56 flex w-[min(18rem,88vw)] flex-col border-r border-border bg-sidebar shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 md:shadow-none lg:w-72',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{
@@ -110,6 +111,10 @@ export function AdminSidebar({
         >
           <div className="mb-2 truncate px-3 text-xs text-muted-foreground sm:mb-3 sm:text-sm">
             {username}
+          </div>
+          <div className="mb-2 flex items-center justify-between gap-2 px-2 sm:mb-3">
+            <span className="text-xs text-muted-foreground sm:text-sm">Тема</span>
+            <ThemeToggle variant="outline" />
           </div>
           <Button
             variant="ghost"

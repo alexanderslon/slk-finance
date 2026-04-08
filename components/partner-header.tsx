@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { SITE_NAME, SITE_TAGLINE } from '@/lib/branding'
 import { Wallet, LogOut } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function PartnerHeader({
   partnerName,
@@ -21,7 +22,7 @@ export function PartnerHeader({
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md supports-backdrop-filter:bg-card/90">
       <div
         className="container mx-auto flex min-h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-4"
         style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0px))' }}
@@ -42,6 +43,7 @@ export function PartnerHeader({
             <span className="truncate text-xs font-medium text-foreground">{partnerName}</span>
             <span className="truncate text-xs text-muted-foreground sm:text-sm">{username}</span>
           </span>
+          <ThemeToggle variant="outline" />
           <Button
             variant="ghost"
             size="sm"

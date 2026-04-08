@@ -159,6 +159,8 @@ export type PartnerRequest = {
   square_meters?: number | null
   status: 'pending' | 'approved' | 'rejected'
   admin_comment?: string
+  /** Объём работ по факту (заполняет админ при одобрении / отклонении) */
+  actual_work_volume?: string | null
   created_at: Date
   updated_at: Date
   partner_name?: string
