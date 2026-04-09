@@ -148,6 +148,7 @@ export function PartnerDashboard({
   partnerId: _partnerId,
   partnerName,
   partnerPhone,
+  telegramWebUrl,
   bonusBalance,
 }: {
   requests: PartnerRequest[]
@@ -155,6 +156,7 @@ export function PartnerDashboard({
   partnerId: number
   partnerName: string
   partnerPhone?: string | null
+  telegramWebUrl: string
   bonusBalance: number
 }) {
   const router = useRouter()
@@ -1048,7 +1050,7 @@ export function PartnerDashboard({
         </CardContent>
       </Card>
 
-      <PartnerHelpCard profilePhone={partnerPhone ?? null} />
+      <PartnerHelpCard profilePhone={partnerPhone ?? null} telegramWebUrl={telegramWebUrl} />
     </div>
   )
 }

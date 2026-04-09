@@ -2,6 +2,7 @@ import { sql } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { PartnerDashboard } from '@/components/partner-dashboard'
 import { ensureDefaultExpenseCategories } from '@/lib/categories'
+import { partnerTelegramWebHrefFromEnv } from '@/lib/partner-support-links'
 
 async function getData(partnerId: number) {
   await ensureDefaultExpenseCategories()
@@ -27,6 +28,7 @@ export default async function PartnerPage() {
   }
 
   const { requests, categories, bonusBalance } = await getData(user.partner_id)
+  const telegramWebUrl = partnerTelegramWebHrefFromEnv()
 
   return (
     <PartnerDashboard
@@ -35,6 +37,7 @@ export default async function PartnerPage() {
       partnerId={user.partner_id}
       partnerName={user.partner_name}
       partnerPhone={user.partner_phone ?? null}
+      telegramWebUrl={telegramWebUrl}
       bonusBalance={bonusBalance}
     />
   )

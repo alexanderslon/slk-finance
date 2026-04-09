@@ -20,6 +20,7 @@ import {
   PARTNER_HELP_TEL_HREF,
   partnerHelpMailtoHref,
   partnerHelpTelegramHref,
+  telegramOpenHrefPreferApp,
 } from '@/lib/partner-support-links'
 import { cn } from '@/lib/utils'
 import { usePartnerUi } from '@/contexts/partner-ui-context'
@@ -31,10 +32,13 @@ function initialPhoneFromProfile(profilePhone: string | null | undefined) {
 
 export function PartnerHelpCard({
   profilePhone = null,
+  telegramWebUrl,
 }: {
   profilePhone?: string | null
+  telegramWebUrl: string
 }) {
-  const telegramHref = partnerHelpTelegramHref()
+  const telegramWebResolved = telegramWebUrl.trim() || partnerHelpTelegramHref()
+  const telegramOpenHref = telegramOpenHrefPreferApp(telegramWebResolved)
   const mailHref = partnerHelpMailtoHref()
   const { registerOpenPartnerHelpForm } = usePartnerUi()
 
@@ -144,7 +148,7 @@ export function PartnerHelpCard({
             className="h-12 flex-1 gap-2 border-[#229ED9]/55 text-base hover:bg-[#229ED9]/10 dark:hover:bg-[#229ED9]/15 sm:min-w-[10rem]"
             asChild
           >
-            <a href={telegramHref} target="_blank" rel="noopener noreferrer">
+            <a href={telegramOpenHref} rel="noopener noreferrer">
               <Send className="h-5 w-5 shrink-0 text-[#229ED9]" aria-hidden />
               Telegram
             </a>
