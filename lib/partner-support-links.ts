@@ -13,6 +13,9 @@ export const PARTNER_HELP_PHONE_DISPLAY = '+7 (900) 055-58-13'
 
 export const PARTNER_HELP_TEL_HREF = 'tel:+79000555813'
 
+/** Telegram для кнопки поддержки (fallback по умолчанию). */
+export const PARTNER_HELP_TELEGRAM_WEB_FALLBACK = 'https://t.me/Sanderskeep'
+
 /**
  * Ссылка для кнопки «Telegram» в кабинете партнёра.
  * Вызывать только на сервере (есть доступ к TELEGRAM_CHAT_ID без префикса NEXT_PUBLIC).
@@ -29,13 +32,13 @@ export function partnerTelegramWebHrefFromEnv(): string {
   const manual = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL?.trim()
   if (manual) return manual
 
-  return 'https://t.me'
+  return PARTNER_HELP_TELEGRAM_WEB_FALLBACK
 }
 
 /** @deprecated для UI используйте partnerTelegramWebHrefFromEnv на сервере и передайте в PartnerHelpCard */
 export function partnerHelpTelegramHref(): string {
   const u = process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM_URL?.trim()
-  return u || 'https://t.me'
+  return u || PARTNER_HELP_TELEGRAM_WEB_FALLBACK
 }
 
 /**
