@@ -250,6 +250,20 @@ ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS square_meters DECIMAL(12, 
 
 ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS actual_work_volume TEXT;
 
+-- --- 008-construction-estimates.sql -----------------------------------------
+
+CREATE TABLE IF NOT EXISTS construction_estimates (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(512) NOT NULL DEFAULT '',
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_construction_estimates_user_updated
+  ON construction_estimates(user_id, updated_at DESC);
+
 -- =============================================================================
 -- Готово. Дальше: Vercel → DATABASE_URL (Pooled), затем POST /api/setup с Bearer SETUP_SECRET
 -- чтобы выставить пароль админа slk = 31337 (или смените пароль в приложении).

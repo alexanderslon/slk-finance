@@ -9,6 +9,7 @@ import {
   Users,
   Handshake,
   FileText,
+  Calculator,
 } from 'lucide-react'
 
 export type AdminNavItem = {
@@ -28,5 +29,6 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: '/admin/goals', label: 'Цели', icon: Target },
   { href: '/admin/workers', label: 'Работники', icon: Users },
   { href: '/admin/partners', label: 'Партнёры', icon: Handshake },
+  { href: '/admin/smeta', label: 'Смета', icon: Calculator },
   { href: '/admin/requests', label: 'Заявки', icon: FileText, bottom: true },
 ]
