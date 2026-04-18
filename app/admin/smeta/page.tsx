@@ -3,10 +3,16 @@ import { ConstructionSmetaCalculator } from '@/components/smeta/construction-sme
 
 export default function AdminSmetaPage() {
   return (
-    <Suspense
-      fallback={<div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">Загрузка калькулятора…</div>}
-    >
-      <ConstructionSmetaCalculator />
-    </Suspense>
+    <div className="min-w-0 max-w-full">
+      <Suspense
+        fallback={
+          <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+            Загрузка калькулятора…
+          </div>
+        }
+      >
+        <ConstructionSmetaCalculator />
+      </Suspense>
+    </div>
   )
 }

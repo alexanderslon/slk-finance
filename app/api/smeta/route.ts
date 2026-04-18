@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { smetaRouteErrorResponse } from '@/lib/smeta-api-errors'
 
 export async function GET() {
   try {
@@ -18,8 +19,7 @@ export async function GET() {
     `
     return NextResponse.json(rows)
   } catch (error) {
-    console.error('[smeta GET]', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    return smetaRouteErrorResponse(error, '[smeta GET]')
   }
 }
 
@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result[0])
   } catch (error) {
-    console.error('[smeta POST]', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    return smetaRouteErrorResponse(error, '[smeta POST]')
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { smetaRouteErrorResponse } from '@/lib/smeta-api-errors'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -29,8 +30,7 @@ export async function GET(_request: NextRequest, context: Ctx) {
 
     return NextResponse.json(rows[0])
   } catch (error) {
-    console.error('[smeta GET id]', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    return smetaRouteErrorResponse(error, '[smeta GET id]')
   }
 }
 
@@ -77,8 +77,7 @@ export async function PUT(request: NextRequest, context: Ctx) {
 
     return NextResponse.json(result[0])
   } catch (error) {
-    console.error('[smeta PUT]', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    return smetaRouteErrorResponse(error, '[smeta PUT]')
   }
 }
 
@@ -107,7 +106,6 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('[smeta DELETE]', error)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    return smetaRouteErrorResponse(error, '[smeta DELETE]')
   }
 }

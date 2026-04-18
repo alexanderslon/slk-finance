@@ -193,3 +193,13 @@
 .smeta-calculator .print-only {
   display: none;
 }
+
+/* Смета: не наследовать светлый --foreground тёмной темы на белом фоне карточек */
+.smeta-calculator-root {
+  color: #18181b;
+  color-scheme: light;
+}
+
+.smeta-calculator-root :where(input, textarea) {
+  color: #18181b;
+}

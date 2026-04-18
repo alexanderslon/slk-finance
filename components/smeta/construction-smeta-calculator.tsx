@@ -124,7 +124,7 @@ function EditableCell({
     return (
       <input
         ref={inputRef}
-        className={`w-full bg-white border border-blue-400 rounded px-2 py-1 text-sm outline-none ${className ?? ""}`}
+        className={`w-full border border-blue-400 bg-white text-zinc-900 rounded px-2 py-1 text-sm outline-none ${className ?? ''}`}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
@@ -139,7 +139,7 @@ function EditableCell({
 
   return (
     <div
-      className={`cursor-pointer px-2 py-1 rounded hover:bg-blue-50 min-h-[28px] flex items-center ${className ?? ""}`}
+      className={`cursor-pointer px-2 py-1 text-zinc-900 rounded hover:bg-blue-50 min-h-[28px] flex items-center ${className ?? ''}`}
       onDoubleClick={startEdit}
       title="Двойной клик для редактирования"
     >
@@ -189,12 +189,13 @@ export function ConstructionSmetaCalculator() {
   const refreshList = useCallback(async () => {
     try {
       const res = await fetch('/api/smeta')
-      const data = (await res.json().catch(() => [])) as EstimateListItem[] | { error?: string }
+      const raw = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setApiError(typeof (data as { error?: string }).error === 'string' ? (data as { error: string }).error : 'Не удалось загрузить список')
+        const err = raw as { error?: string }
+        setApiError(typeof err.error === 'string' ? err.error : 'Не удалось загрузить список')
         return
       }
-      setEstimateList(Array.isArray(data) ? data : [])
+      setEstimateList(Array.isArray(raw) ? (raw as EstimateListItem[]) : [])
       setApiError('')
     } catch {
       setApiError('Ошибка сети при загрузке смет')
@@ -515,27 +516,31 @@ export function ConstructionSmetaCalculator() {
 
   const headerField = (key: keyof HeaderData, label: string, placeholder: string) => (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
+      <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wide">{label}</label>
       <input
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
+        className="border border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none transition"
         placeholder={placeholder}
         value={header[key]}
         onChange={(e) => setHeader((h) => ({ ...h, [key]: e.target.value }))}
       />
     </div>
-  );
+  )
 
   const renderTable = (printMode = false) => {
-    const cellPad = printMode ? "px-2 py-1" : "px-1 py-1";
-    const textSize = printMode ? "text-[11px]" : "text-sm";
+    const cellPad = printMode ? 'px-2 py-1' : 'px-0.5 py-1 sm:px-1'
+    const textSize = printMode ? 'text-[11px]' : 'text-xs sm:text-sm'
 
     return (
-      <div className="overflow-x-auto">
-        <table className={`w-full border-collapse print-table ${textSize}`}>
+      <div className="max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
+        <table
+          className={`w-full border-collapse print-table ${textSize} ${printMode ? '' : 'min-w-[720px]'}`}
+        >
           <thead>
             <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
               <th className={`border border-blue-700 ${cellPad} w-10 text-center`}>№</th>
-              <th className={`border border-blue-700 ${cellPad} min-w-[200px]`}>Наименование работ</th>
+              <th className={`border border-blue-700 ${cellPad} min-w-[120px] sm:min-w-[200px]`}>
+                Наименование работ
+              </th>
               <th className={`border border-blue-700 ${cellPad} w-16 text-center`}>Ед. изм.</th>
               <th className={`border border-blue-700 ${cellPad} w-16 text-center`}>Кол-во</th>
               {!printMode && (
@@ -579,9 +584,9 @@ export function ConstructionSmetaCalculator() {
                     reorderRows(fromId, row.id);
                     draggingRowIdRef.current = null;
                   }}
-                  className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50 transition`}
+                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-zinc-50'} transition hover:bg-blue-50`}
                 >
-                  <td className={`border border-gray-300 ${cellPad} text-center font-medium text-gray-600`}>
+                  <td className={`border border-zinc-300 ${cellPad} text-center font-medium text-zinc-700`}>
                     {idx + 1}
                   </td>
                   <td className={`border border-gray-300 ${cellPad}`}>
@@ -686,7 +691,7 @@ export function ConstructionSmetaCalculator() {
 
   if (isPreview) {
     return (
-      <div className="min-h-screen bg-slate-100">
+      <div className="smeta-calculator-root min-h-screen w-full min-w-0 max-w-full bg-slate-100 text-zinc-900 [color-scheme:light]">
         {iosPrintHelpOpen && (
           <div
             className="no-print fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60"
@@ -803,26 +808,26 @@ export function ConstructionSmetaCalculator() {
   }
 
   return (
-    <div className="smeta-calculator min-h-screen bg-gradient-to-br from-slate-100 to-blue-50">
+    <div className="smeta-calculator smeta-calculator-root min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-100 to-blue-50 text-zinc-900 [color-scheme:light]">
       <div data-print-root className="print-only">
         {renderPrintDocument()}
       </div>
 
       {/* ===== SCREEN LAYOUT ===== */}
-      <div className="max-w-[1400px] mx-auto p-4 md:p-6 print-container">
+      <div className="print-container mx-auto w-full min-w-0 max-w-[1400px] px-2 pb-4 pt-0 sm:px-3 sm:pb-6 md:px-6 md:py-6">
         {/* Header bar */}
         <div className="no-print mb-6">
-          <div className="mb-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="mb-4 rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Сохранённые сметы</p>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                   <Select
                     value={listSelect || undefined}
                     onValueChange={setListSelect}
                     disabled={loadingList}
                   >
-                    <SelectTrigger className="w-full sm:max-w-md">
+                    <SelectTrigger className="w-full border-zinc-300 bg-white text-zinc-900 sm:max-w-md [&_span]:text-zinc-900">
                       <SelectValue placeholder={loadingList ? 'Загрузка…' : 'Выберите смету'} />
                     </SelectTrigger>
                     <SelectContent>
@@ -833,16 +838,27 @@ export function ConstructionSmetaCalculator() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="secondary" onClick={() => void handleLoadSelected()} disabled={!listSelect}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full shrink-0 sm:w-auto"
+                    onClick={() => void handleLoadSelected()}
+                    disabled={!listSelect}
+                  >
                     Открыть
                   </Button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={() => void handleSave()} disabled={saving}>
+              <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+                <Button
+                  type="button"
+                  className="w-full shrink-0 sm:w-auto"
+                  onClick={() => void handleSave()}
+                  disabled={saving}
+                >
                   {saving ? 'Сохранение…' : estimateId ? 'Сохранить' : 'Сохранить как новую'}
                 </Button>
-                <Button type="button" variant="outline" onClick={handleNew}>
+                <Button type="button" variant="outline" className="w-full shrink-0 sm:w-auto" onClick={handleNew}>
                   Новая смета
                 </Button>
               </div>
@@ -859,17 +875,17 @@ export function ConstructionSmetaCalculator() {
             ) : null}
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">
                 📋 Смета на работы
               </h1>
-              <p className="text-gray-500 mt-1">Управление позициями и расчёт стоимости</p>
+              <p className="mt-1 text-sm text-zinc-600 sm:text-base">Управление позициями и расчёт стоимости</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex shrink-0">
               <button
                 onClick={openPreview}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-200 active:scale-95"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 active:scale-95 sm:w-auto sm:px-5"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                 Предпросмотр
@@ -878,12 +894,12 @@ export function ConstructionSmetaCalculator() {
           </div>
 
           {/* Header fields card */}
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 mb-6">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <div className="mb-6 rounded-2xl border border-zinc-200 bg-white p-4 shadow-md sm:p-5">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-zinc-600">
               <span className="w-2 h-2 rounded-full bg-blue-500"></span>
               Реквизиты документа
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {headerField("documentNumber", "№ документа", "СМ-001")}
               {headerField("date", "Дата", "2024-01-01")}
               {headerField("city", "Город", "Москва")}
@@ -896,12 +912,14 @@ export function ConstructionSmetaCalculator() {
         </div>
 
         {/* Main table card (screen) */}
-        <div className="no-print bg-white rounded-2xl shadow-md border border-gray-100 p-4 md:p-5 mb-6">
-          {renderTable(false)}
-          <div className="mt-4 flex justify-end">
+        <div className="no-print mb-6 w-full min-w-0 rounded-2xl border border-zinc-200 bg-white p-2 shadow-md sm:p-4 md:p-5">
+          <div className="-mx-0 min-w-0 overflow-x-auto overscroll-x-contain sm:mx-0">
+            {renderTable(false)}
+          </div>
+          <div className="mt-4 flex justify-stretch sm:justify-end">
             <button
               onClick={addRow}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-200 active:scale-95"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 active:scale-95 sm:w-auto sm:px-5"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -912,25 +930,25 @@ export function ConstructionSmetaCalculator() {
         </div>
 
         {/* Bottom cards */}
-        <div className="no-print grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="no-print mb-6 grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Prepayment */}
           <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-zinc-600">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
               Предоплата
             </h3>
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-lg font-semibold w-full focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-lg font-semibold text-zinc-900 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400"
                 value={prepayment}
                 onChange={(e) => setPrepayment(e.target.value)}
               />
-              <span className="text-gray-500 font-semibold">₽</span>
+              <span className="font-semibold text-zinc-600">₽</span>
             </div>
-            <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="mt-3 border-t border-zinc-100 pt-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Итого к оплате:</span>
+                <span className="text-zinc-600">Итого к оплате:</span>
                 <span className="font-bold text-green-700 text-lg">{fmt(totals.toPay)} ₽</span>
               </div>
             </div>
@@ -938,7 +956,7 @@ export function ConstructionSmetaCalculator() {
 
           {/* Worker expenses */}
           <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-zinc-600">
               <span className="w-2 h-2 rounded-full bg-amber-500"></span>
               Расходы на работников
             </h3>
@@ -950,27 +968,27 @@ export function ConstructionSmetaCalculator() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600 w-36 shrink-0">Разнорабочий:</label>
+                <label className="w-36 shrink-0 text-sm text-zinc-700">Разнорабочий:</label>
                 <input
                   type="text"
-                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-full focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400"
                   value={laborer}
                   onChange={(e) => setLaborer(e.target.value)}
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600 w-36 shrink-0">Откат:</label>
+                <label className="w-36 shrink-0 text-sm text-zinc-700">Откат:</label>
                 <input
                   type="text"
-                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-full focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400"
                   value={otkat}
                   onChange={(e) => setOtkat(e.target.value)}
                 />
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="mt-3 border-t border-zinc-100 pt-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Итого (работники + откат):</span>
+                <span className="text-zinc-600">Итого (работники + откат):</span>
                 <span className="font-extrabold text-amber-700">{fmt(totals.totalExpenses)} ₽</span>
               </div>
             </div>
@@ -1002,7 +1020,7 @@ export function ConstructionSmetaCalculator() {
         </div>
 
         {/* Footer info */}
-        <div className="no-print text-center text-gray-400 text-xs py-4 mt-4 border-t border-gray-200">
+        <div className="no-print mt-4 border-t border-zinc-200 py-4 text-center text-xs text-zinc-500">
           Двойной клик по ячейке для редактирования · Сохранение — в базу (кнопка «Сохранить»)
         </div>
       </div>
