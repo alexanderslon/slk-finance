@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { toJpeg } from 'html-to-image'
 import { saveAs } from 'file-saver'
 import { Button } from '@/components/ui/button'
@@ -100,6 +100,19 @@ function fmt(n: number): string {
   return safe.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
 }
 
+/** Сумма для списка сохранённых смет (API может вернуть string из numeric). */
+function fmtMoneyOrDash(value: unknown): string {
+  if (value === null || value === undefined) return '—'
+  const n =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? parseFloat(value.replace(/\s/g, '').replace(',', '.'))
+        : Number(value)
+  if (!Number.isFinite(n)) return '—'
+  return `${fmt(n)} ₽`
+}
+
 function EditableCell({
   value,
   onChange,
@@ -159,10 +172,19 @@ function EditableCell({
   );
 }
 
-type EstimateListItem = { id: number; title: string; updated_at: string; created_at: string }
+type EstimateListItem = {
+  id: number
+  title: string
+  document_number?: string | null
+  total_amount?: number | string | null
+  updated_at: string
+  created_at: string
+}
 
 export function ConstructionSmetaCalculator() {
   const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
   const isPreview = useMemo(() => searchParams.get('preview') === '1', [searchParams])
   const previewKey = useMemo(() => searchParams.get('doc') ?? '', [searchParams])
 
@@ -394,7 +416,12 @@ export function ConstructionSmetaCalculator() {
     const id = Number(listSelect)
     if (!Number.isFinite(id) || id <= 0) return
     const item = estimateList.find((e) => e.id === id)
-    const label = item?.title?.trim() ? item.title : `№ ${id}`
+    const label =
+      item?.document_number?.trim() != null && item.document_number.trim() !== ''
+        ? `№ ${item.document_number.trim()} · ${fmtMoneyOrDash(item.total_amount)}`
+        : item?.title?.trim()
+          ? `${item.title} · ${fmtMoneyOrDash(item?.total_amount)}`
+          : `id ${id}`
     if (!window.confirm(`Удалить смету «${label}» из базы? Восстановить будет нельзя.`)) return
     setApiError('')
     setDeleting(true)
@@ -552,8 +579,8 @@ export function ConstructionSmetaCalculator() {
     </>
   );
 
-  const openPreview = () => {
-    const key = makePreviewKey();
+  const openPreview = useCallback(() => {
+    const key = makePreviewKey()
     const state: DocState = {
       header,
       rows,
@@ -563,15 +590,52 @@ export function ConstructionSmetaCalculator() {
       overheadPercent,
       enabledStages,
     }
-    localStorage.setItem(key, JSON.stringify(state));
+    try {
+      localStorage.setItem(key, JSON.stringify(state))
+    } catch {
+      setApiError('Не удалось записать предпросмотр в память браузера')
+      return
+    }
 
-    const url = new URL(window.location.href);
-    url.searchParams.set("preview", "1");
-    url.searchParams.set("doc", key);
-    const next = url.toString();
-    const w = window.open(next, "_blank");
-    if (!w) window.location.assign(next);
-  };
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('preview', '1')
+    params.set('doc', key)
+    const nextPath = `${pathname}?${params.toString()}`
+
+    // На телефонах window.open(..., _blank) часто блокируется или ведёт на пустую/левую вкладку.
+    // Тогда срабатывал fallback location.assign — ощущение «выброса» из сметы. Надёжнее: client navigation.
+    const mq =
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia.bind(window)
+        : null
+    const useSameTab =
+      !!mq &&
+      (mq('(hover: none)').matches ||
+        mq('(max-width: 768px)').matches ||
+        mq('(pointer: coarse)').matches)
+
+    if (useSameTab) {
+      router.push(nextPath)
+      return
+    }
+
+    const absUrl = new URL(nextPath, window.location.origin).href
+    const w = window.open(absUrl, '_blank', 'noopener,noreferrer')
+    if (!w) {
+      router.push(nextPath)
+    }
+  }, [
+    enabledStages,
+    header,
+    laborer,
+    otkat,
+    overheadPercent,
+    pathname,
+    prepayment,
+    rows,
+    router,
+    searchParams,
+  ])
 
   const runSystemPrint = useCallback(() => {
     const restore = () => {
@@ -1087,11 +1151,18 @@ export function ConstructionSmetaCalculator() {
                       <SelectValue placeholder={loadingList ? 'Загрузка…' : 'Выберите смету'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {estimateList.map((e) => (
-                        <SelectItem key={e.id} value={String(e.id)}>
-                          #{e.id} · {e.title || 'Без названия'}
-                        </SelectItem>
-                      ))}
+                      {estimateList.map((e) => {
+                        const docLabel = e.document_number?.trim()
+                          ? `№ ${e.document_number.trim()}`
+                          : `#${e.id}`
+                        return (
+                          <SelectItem key={e.id} value={String(e.id)}>
+                            <span className="tabular-nums">
+                              {docLabel} · {fmtMoneyOrDash(e.total_amount)}
+                            </span>
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                   <Button

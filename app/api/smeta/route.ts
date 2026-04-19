@@ -40,6 +40,12 @@ export async function GET() {
           NULLIF(TRIM(title), ''),
           'Смета'
         ) AS title,
+        NULLIF(TRIM(document_number), '') AS document_number,
+        COALESCE(
+          total_amount,
+          (data->'finance'->>'totalUpperSum')::numeric,
+          (payload->'finance'->>'totalUpperSum')::numeric
+        ) AS total_amount,
         created_at,
         updated_at
       FROM construction_estimates
