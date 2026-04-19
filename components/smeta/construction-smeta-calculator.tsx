@@ -466,12 +466,24 @@ export function ConstructionSmetaCalculator() {
 
   const updateRow = useCallback((id: number, field: keyof RowData, value: string | number) => {
     const numericFields: ReadonlySet<keyof RowData> = new Set(["quantity", "workerPrice", "upperPrice"]);
+    if (field === 'stage') {
+      const newStage = normalizeSmetaStage(value)
+      setRows((prev) => {
+        const mapped = prev.map((r) => (r.id === id ? { ...r, stage: newStage } : r))
+        const indexed = mapped.map((r, idx) => ({ r, idx }))
+        indexed.sort((a, b) => {
+          const sa = normalizeSmetaStage(a.r.stage)
+          const sb = normalizeSmetaStage(b.r.stage)
+          if (sa !== sb) return sa - sb
+          return a.idx - b.idx
+        })
+        return indexed.map(({ r }) => r)
+      })
+      return
+    }
     setRows((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r;
-        if (field === 'stage') {
-          return { ...r, stage: normalizeSmetaStage(value) }
-        }
         if (numericFields.has(field)) {
           return { ...r, [field]: toNumber(value) };
         }
