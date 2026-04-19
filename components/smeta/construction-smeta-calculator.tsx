@@ -17,7 +17,6 @@ import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-type
 import {
   SMETA_ALL_STAGES,
   SMETA_INITIAL_ROWS,
-  SMETA_OVERHEAD_TAX_PRESETS,
   defaultHeader,
   firstEnabledStage,
   nextRowIdFromRows,
@@ -1296,50 +1295,24 @@ export function ConstructionSmetaCalculator() {
               </p>
             ) : null}
           </div>
-          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-zinc-100 bg-zinc-50/90 px-3 py-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
+          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-zinc-100 bg-zinc-50/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
               <p className="text-sm font-semibold text-zinc-800">Накладные расходы</p>
-              <p className="text-xs text-zinc-500">
-                Процент от суммы всех позиций (колонка «Сумма»). Добавляется к итогу. Ниже — типовые ставки налога.
-              </p>
+              <p className="text-xs text-zinc-500">Процент от суммы всех позиций (колонка «Сумма»). Добавляется к итогу.</p>
             </div>
-            <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-xl sm:items-end">
-              <div className="flex w-full flex-col gap-1.5 sm:items-end">
-                <span className="text-xs font-medium text-zinc-600">Налог / ставка</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {SMETA_OVERHEAD_TAX_PRESETS.map((p) => {
-                    const active = toNumber(overheadPercent) === p
-                    return (
-                      <Button
-                        key={p}
-                        type="button"
-                        variant={active ? 'default' : 'outline'}
-                        size="sm"
-                        className="min-w-[3.25rem] tabular-nums"
-                        onClick={() => setOverheadPercent(String(p))}
-                      >
-                        {p}%
-                      </Button>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-zinc-500">Вручную:</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-24 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-right font-semibold text-zinc-900 tabular-nums outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400"
-                  value={overheadPercent}
-                  onChange={(e) => setOverheadPercent(e.target.value)}
-                  aria-label="Процент накладных расходов"
-                />
-                <span className="text-sm font-medium text-zinc-600">%</span>
-                <span className="text-sm text-zinc-600">
-                  → <span className="font-semibold tabular-nums text-zinc-900">{fmt(totals.overheadAmount)}</span>{' '}
-                  ₽
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                inputMode="decimal"
+                className="w-24 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-right font-semibold text-zinc-900 tabular-nums outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400"
+                value={overheadPercent}
+                onChange={(e) => setOverheadPercent(e.target.value)}
+                aria-label="Процент накладных расходов"
+              />
+              <span className="text-sm font-medium text-zinc-600">%</span>
+              <span className="text-sm text-zinc-600">
+                → <span className="font-semibold tabular-nums text-zinc-900">{fmt(totals.overheadAmount)}</span> ₽
+              </span>
             </div>
           </div>
           <div className="-mx-0 min-w-0 overflow-x-auto overscroll-x-contain sm:mx-0">
