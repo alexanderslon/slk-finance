@@ -5,6 +5,9 @@ export type SmetaStage = 1 | 2 | 3 | 4
 /** Все этапы по порядку (для сортировки и UI). */
 export const SMETA_ALL_STAGES: readonly SmetaStage[] = [1, 2, 3, 4]
 
+/** Типовые ставки накладных / налога (% от суммы позиций). */
+export const SMETA_OVERHEAD_TAX_PRESETS = [4, 6, 15, 35] as const
+
 export interface RowData {
   id: number
   /** Этап работ (разбивка сметы). */
