@@ -2,6 +2,9 @@
 
 export type SmetaStage = 1 | 2 | 3 | 4
 
+/** Все этапы по порядку (для сортировки и UI). */
+export const SMETA_ALL_STAGES: readonly SmetaStage[] = [1, 2, 3, 4]
+
 export interface RowData {
   id: number
   /** Этап работ (разбивка сметы). */
@@ -32,6 +35,8 @@ export interface DocState {
   otkat: string
   /** Накладные расходы, % от суммы всех позиций (верхняя колонка). */
   overheadPercent: string
+  /** Какие этапы участвуют в смете и расчёте (минимум один). Остальные скрыты. В старых сохранениях может отсутствовать — тогда считаются все 4. */
+  enabledStages?: SmetaStage[]
 }
 
 function row(
@@ -88,5 +93,24 @@ export function normalizeSmetaStage(v: unknown): SmetaStage {
   if (n === 2) return 2
   if (n === 3) return 3
   if (n === 4) return 4
+  return 1
+}
+
+/** Нормализация списка активных этапов: непустой подмножество {1..4}, порядок 1→4. */
+export function normalizeEnabledStages(raw: unknown): SmetaStage[] {
+  if (!raw || !Array.isArray(raw)) return [...SMETA_ALL_STAGES]
+  const picked = new Set<SmetaStage>()
+  for (const x of raw) {
+    const s = normalizeSmetaStage(x)
+    if (SMETA_ALL_STAGES.includes(s)) picked.add(s)
+  }
+  if (picked.size === 0) return [1]
+  return SMETA_ALL_STAGES.filter((s) => picked.has(s))
+}
+
+export function firstEnabledStage(stages: readonly SmetaStage[]): SmetaStage {
+  for (const s of SMETA_ALL_STAGES) {
+    if (stages.includes(s)) return s
+  }
   return 1
 }

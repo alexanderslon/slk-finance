@@ -1,4 +1,4 @@
-import type { DocState, HeaderData, RowData } from '@/lib/smeta-types'
+import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-types'
 
 export type SmetaFinanceTotals = {
   /** Сумма по позициям (без накладных). */
@@ -23,6 +23,7 @@ export function buildSmetaPersistBody(
   laborer: string,
   otkat: string,
   overheadPercent: string,
+  enabledStages: SmetaStage[],
   totals: SmetaFinanceTotals,
 ): Record<string, unknown> {
   const sq = header.squareMeters.replace(/\s/g, '').replace(',', '.')
@@ -43,6 +44,7 @@ export function buildSmetaPersistBody(
       laborer,
       otkat,
       overheadPercent,
+      enabledStages,
       finance: totals,
     },
   }

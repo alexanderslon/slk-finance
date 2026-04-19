@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { toJpeg } from 'html-to-image'
 import { saveAs } from 'file-saver'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -14,12 +15,16 @@ import {
 } from '@/components/ui/select'
 import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-types'
 import {
+  SMETA_ALL_STAGES,
   SMETA_INITIAL_ROWS,
   defaultHeader,
+  firstEnabledStage,
   nextRowIdFromRows,
+  normalizeEnabledStages,
   normalizeSmetaStage,
 } from '@/lib/smeta-types'
 import { buildSmetaPersistBody } from '@/lib/smeta-api-body'
+import { Trash2 } from 'lucide-react'
 
 const PREVIEW_STORAGE_PREFIX = "smeta_doc:";
 
@@ -168,6 +173,7 @@ export function ConstructionSmetaCalculator() {
   const [laborer, setLaborer] = useState<string>('0')
   const [otkat, setOtkat] = useState<string>('5000')
   const [overheadPercent, setOverheadPercent] = useState<string>('0')
+  const [enabledStages, setEnabledStages] = useState<SmetaStage[]>(() => [...SMETA_ALL_STAGES])
   const nextIdRef = useRef(nextRowIdFromRows(SMETA_INITIAL_ROWS))
   const draggingRowIdRef = useRef<number | null>(null)
   const printContentRef = useRef<HTMLDivElement | null>(null)
@@ -179,6 +185,7 @@ export function ConstructionSmetaCalculator() {
   const [estimateId, setEstimateId] = useState<number | null>(null)
   const [listSelect, setListSelect] = useState<string>('')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [loadingList, setLoadingList] = useState(true)
   const [apiError, setApiError] = useState('')
 
@@ -198,6 +205,7 @@ export function ConstructionSmetaCalculator() {
     if (typeof doc.otkat === 'string') setOtkat(doc.otkat)
     if (typeof doc.overheadPercent === 'string') setOverheadPercent(doc.overheadPercent)
     else setOverheadPercent('0')
+    setEnabledStages(normalizeEnabledStages(doc.enabledStages))
   }, [])
 
   const refreshList = useCallback(async () => {
@@ -223,12 +231,19 @@ export function ConstructionSmetaCalculator() {
     void refreshList()
   }, [isPreview, refreshList])
 
+  const visibleRows = useMemo(() => {
+    const set = new Set(enabledStages)
+    return rows.filter((r) => set.has(normalizeSmetaStage(r.stage)))
+  }, [rows, enabledStages])
+
+  const hiddenRowsCount = rows.length - visibleRows.length
+
   const totals = useMemo(() => {
-    const worksSubtotal = rows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.upperPrice), 0)
+    const worksSubtotal = visibleRows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.upperPrice), 0)
     const overheadPct = Math.max(0, toNumber(overheadPercent))
     const overheadAmount = worksSubtotal * (overheadPct / 100)
     const totalUpperSum = worksSubtotal + overheadAmount
-    const totalWorkerSum = rows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.workerPrice), 0)
+    const totalWorkerSum = visibleRows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.workerPrice), 0)
     const prepaymentN = toNumber(prepayment)
     const laborerN = toNumber(laborer)
     const otkatN = toNumber(otkat)
@@ -248,7 +263,7 @@ export function ConstructionSmetaCalculator() {
       myIncome,
       toPay,
     }
-  }, [rows, prepayment, laborer, otkat, overheadPercent])
+  }, [visibleRows, prepayment, laborer, otkat, overheadPercent])
 
   const totalsByStage = useMemo(() => {
     const m: Record<SmetaStage, { upper: number; worker: number }> = {
@@ -257,20 +272,29 @@ export function ConstructionSmetaCalculator() {
       3: { upper: 0, worker: 0 },
       4: { upper: 0, worker: 0 },
     }
-    for (const r of rows) {
+    for (const r of visibleRows) {
       const st = normalizeSmetaStage(r.stage)
       const q = toNumber(r.quantity)
       m[st].upper += q * toNumber(r.upperPrice)
       m[st].worker += q * toNumber(r.workerPrice)
     }
     return m
-  }, [rows])
+  }, [visibleRows])
 
   const handleSave = useCallback(async () => {
     setApiError('')
     setSaving(true)
     try {
-      const body = buildSmetaPersistBody(header, rows, prepayment, laborer, otkat, overheadPercent, totals)
+      const body = buildSmetaPersistBody(
+        header,
+        rows,
+        prepayment,
+        laborer,
+        otkat,
+        overheadPercent,
+        enabledStages,
+        totals,
+      )
       if (estimateId) {
         const res = await fetch(`/api/smeta/${estimateId}`, {
           method: 'PUT',
@@ -305,7 +329,7 @@ export function ConstructionSmetaCalculator() {
     } finally {
       setSaving(false)
     }
-  }, [estimateId, header, laborer, otkat, overheadPercent, prepayment, refreshList, rows, totals])
+  }, [estimateId, enabledStages, header, laborer, otkat, overheadPercent, prepayment, refreshList, rows, totals])
 
   const handleNew = useCallback(() => {
     setEstimateId(null)
@@ -317,7 +341,19 @@ export function ConstructionSmetaCalculator() {
     setLaborer('0')
     setOtkat('5000')
     setOverheadPercent('0')
+    setEnabledStages([...SMETA_ALL_STAGES])
     setApiError('')
+  }, [])
+
+  const toggleStageEnabled = useCallback((st: SmetaStage, checked: boolean) => {
+    setEnabledStages((prev) => {
+      if (checked) {
+        if (prev.includes(st)) return prev
+        return [...prev, st].sort((a, b) => a - b)
+      }
+      if (prev.length <= 1) return prev
+      return prev.filter((x) => x !== st)
+    })
   }, [])
 
   const handleLoadSelected = useCallback(async () => {
@@ -354,6 +390,34 @@ export function ConstructionSmetaCalculator() {
     }
   }, [applyDocState, listSelect])
 
+  const handleDeleteSaved = useCallback(async () => {
+    const id = Number(listSelect)
+    if (!Number.isFinite(id) || id <= 0) return
+    const item = estimateList.find((e) => e.id === id)
+    const label = item?.title?.trim() ? item.title : `№ ${id}`
+    if (!window.confirm(`Удалить смету «${label}» из базы? Восстановить будет нельзя.`)) return
+    setApiError('')
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/smeta/${id}`, { method: 'DELETE' })
+      const raw = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        setApiError(typeof raw.error === 'string' ? raw.error : 'Не удалось удалить смету')
+        return
+      }
+      await refreshList()
+      if (estimateId === id) {
+        handleNew()
+      } else {
+        setListSelect('')
+      }
+    } catch {
+      setApiError('Ошибка сети при удалении')
+    } finally {
+      setDeleting(false)
+    }
+  }, [estimateId, estimateList, handleNew, listSelect, refreshList])
+
   useEffect(() => {
     if (!isPreview) return;
     if (!previewKey) return;
@@ -367,6 +431,7 @@ export function ConstructionSmetaCalculator() {
       if (typeof parsed?.laborer === "string") setLaborer(parsed.laborer);
       if (typeof parsed?.otkat === "string") setOtkat(parsed.otkat);
       if (typeof parsed?.overheadPercent === "string") setOverheadPercent(parsed.overheadPercent);
+      setEnabledStages(normalizeEnabledStages(parsed?.enabledStages));
     } catch {
       // ignore malformed storage
     }
@@ -391,8 +456,12 @@ export function ConstructionSmetaCalculator() {
   const addRow = () => {
     const id = nextIdRef.current++
     setRows((prev) => {
-      const last = prev[prev.length - 1]
-      const stage: SmetaStage = last ? normalizeSmetaStage(last.stage) : 1
+      const set = new Set(enabledStages)
+      const visible = prev.filter((r) => set.has(normalizeSmetaStage(r.stage)))
+      const lastVisible = visible[visible.length - 1]
+      const stage: SmetaStage = lastVisible
+        ? normalizeSmetaStage(lastVisible.stage)
+        : firstEnabledStage(enabledStages)
       return [
         ...prev,
         {
@@ -485,7 +554,15 @@ export function ConstructionSmetaCalculator() {
 
   const openPreview = () => {
     const key = makePreviewKey();
-    const state: DocState = { header, rows, prepayment, laborer, otkat, overheadPercent };
+    const state: DocState = {
+      header,
+      rows,
+      prepayment,
+      laborer,
+      otkat,
+      overheadPercent,
+      enabledStages,
+    }
     localStorage.setItem(key, JSON.stringify(state));
 
     const url = new URL(window.location.href);
@@ -570,10 +647,10 @@ export function ConstructionSmetaCalculator() {
     const cellPad = printMode ? 'px-2 py-1' : 'px-0.5 py-1 sm:px-1'
     const textSize = printMode ? 'text-[11px]' : 'text-xs sm:text-sm'
     const tbodyNodes: ReactNode[] = []
-    rows.forEach((row, idx) => {
+    visibleRows.forEach((row, idx) => {
       const st = normalizeSmetaStage(row.stage)
-      const prev = rows[idx - 1]
-      const next = rows[idx + 1]
+      const prev = visibleRows[idx - 1]
+      const next = visibleRows[idx + 1]
       const showStageHead = !prev || normalizeSmetaStage(prev.stage) !== st
       const showStageSub = !next || normalizeSmetaStage(next.stage) !== st
       const qty = toNumber(row.quantity)
@@ -633,10 +710,11 @@ export function ConstructionSmetaCalculator() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Этап 1</SelectItem>
-                  <SelectItem value="2">Этап 2</SelectItem>
-                  <SelectItem value="3">Этап 3</SelectItem>
-                  <SelectItem value="4">Этап 4</SelectItem>
+                  {enabledStages.map((es) => (
+                    <SelectItem key={es} value={String(es)}>
+                      Этап {es}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </td>
@@ -751,6 +829,19 @@ export function ConstructionSmetaCalculator() {
         )
       }
     })
+
+    if (visibleRows.length === 0) {
+      tbodyNodes.push(
+        <tr key="smeta-empty-visible">
+          <td
+            colSpan={printMode ? 6 : 10}
+            className={`border border-zinc-300 ${cellPad} py-6 text-center text-sm text-zinc-500`}
+          >
+            Нет позиций на включённых этапах. Включите этап ниже или добавьте строку.
+          </td>
+        </tr>,
+      )
+    }
 
     return (
       <div className="max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
@@ -1012,6 +1103,17 @@ export function ConstructionSmetaCalculator() {
                   >
                     Открыть
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto"
+                    onClick={() => void handleDeleteSaved()}
+                    disabled={!listSelect || deleting}
+                    title="Удалить выбранную смету из базы"
+                  >
+                    <Trash2 className="mr-1.5 h-4 w-4" aria-hidden />
+                    {deleting ? 'Удаление…' : 'Удалить'}
+                  </Button>
                 </div>
               </div>
               <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
@@ -1078,6 +1180,38 @@ export function ConstructionSmetaCalculator() {
 
         {/* Main table card (screen) */}
         <div className="no-print mb-6 w-full min-w-0 rounded-2xl border border-zinc-200 bg-white p-2 shadow-md sm:p-4 md:p-5">
+          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-zinc-100 bg-white px-3 py-3 sm:px-4">
+            <div>
+              <p className="text-sm font-semibold text-zinc-800">Этапы в смете</p>
+              <p className="text-xs text-zinc-500">
+                Снимите галочку, чтобы скрыть этап из таблицы и суммы. Хотя бы один этап должен остаться включённым.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {SMETA_ALL_STAGES.map((st) => {
+                const onlyOne = enabledStages.length === 1 && enabledStages[0] === st
+                return (
+                  <label
+                    key={st}
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 ${onlyOne ? 'opacity-90' : ''}`}
+                  >
+                    <Checkbox
+                      checked={enabledStages.includes(st)}
+                      disabled={onlyOne}
+                      onCheckedChange={(c) => toggleStageEnabled(st, c === true)}
+                      aria-label={`Этап ${st}${onlyOne ? ', нельзя отключить последний' : ''}`}
+                    />
+                    <span>Этап {st}</span>
+                  </label>
+                )
+              })}
+            </div>
+            {hiddenRowsCount > 0 ? (
+              <p className="text-xs text-amber-800">
+                Скрыто позиций на выключенных этапах: {hiddenRowsCount}. Включите этап снова, чтобы вернуть строки.
+              </p>
+            ) : null}
+          </div>
           <div className="mb-4 flex flex-col gap-2 rounded-xl border border-zinc-100 bg-zinc-50/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-zinc-800">Накладные расходы</p>
@@ -1216,7 +1350,7 @@ export function ConstructionSmetaCalculator() {
 
         {/* Footer info */}
         <div className="no-print mt-4 border-t border-zinc-200 py-4 text-center text-xs text-zinc-500">
-          Двойной клик по ячейке для редактирования · Сохранение — в базу (кнопка «Сохранить»)
+          Двойной клик по ячейке для редактирования · Корзина в таблице — удалить позицию в смете · «Удалить» у списка — удалить смету из базы
         </div>
       </div>
     </div>
