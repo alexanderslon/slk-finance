@@ -9,9 +9,13 @@ export function smetaRouteErrorResponse(error: unknown, logLabel: string): NextR
     /undefined_table/i.test(msg) ||
     (/does not exist/i.test(msg) && /construction_estimates/i.test(msg))
 
+  const missingColumn = /undefined_column/i.test(msg) || /column .* does not exist/i.test(msg)
+
   const userMessage = missingTable
     ? 'В базе нет таблицы смет. Выполните SQL из scripts/008-construction-estimates.sql (Neon → SQL Editor).'
-    : 'Ошибка сервера при работе с сметами'
+    : missingColumn
+      ? 'Схема смет устарела. Выполните scripts/009-construction-estimates-extended.sql в Neon (SQL Editor).'
+      : 'Ошибка сервера при работе с сметами'
 
   return NextResponse.json(
     {

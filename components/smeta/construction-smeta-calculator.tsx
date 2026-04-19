@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toJpeg } from 'html-to-image'
 import { saveAs } from 'file-saver'
@@ -12,8 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { DocState, HeaderData, RowData } from '@/lib/smeta-types'
-import { SMETA_INITIAL_ROWS, defaultHeader, nextRowIdFromRows } from '@/lib/smeta-types'
+import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-types'
+import {
+  SMETA_INITIAL_ROWS,
+  defaultHeader,
+  nextRowIdFromRows,
+  normalizeSmetaStage,
+} from '@/lib/smeta-types'
+import { buildSmetaPersistBody } from '@/lib/smeta-api-body'
 
 const PREVIEW_STORAGE_PREFIX = "smeta_doc:";
 
@@ -161,6 +167,7 @@ export function ConstructionSmetaCalculator() {
   const [prepayment, setPrepayment] = useState<string>('5000')
   const [laborer, setLaborer] = useState<string>('0')
   const [otkat, setOtkat] = useState<string>('5000')
+  const [overheadPercent, setOverheadPercent] = useState<string>('0')
   const nextIdRef = useRef(nextRowIdFromRows(SMETA_INITIAL_ROWS))
   const draggingRowIdRef = useRef<number | null>(null)
   const printContentRef = useRef<HTMLDivElement | null>(null)
@@ -178,12 +185,19 @@ export function ConstructionSmetaCalculator() {
   const applyDocState = useCallback((doc: DocState) => {
     if (doc.header) setHeader({ ...doc.header })
     if (doc.rows?.length) {
-      setRows(doc.rows.map((r) => ({ ...r })))
+      setRows(
+        doc.rows.map((r) => ({
+          ...r,
+          stage: normalizeSmetaStage((r as RowData).stage),
+        })),
+      )
       nextIdRef.current = nextRowIdFromRows(doc.rows)
     }
     if (typeof doc.prepayment === 'string') setPrepayment(doc.prepayment)
     if (typeof doc.laborer === 'string') setLaborer(doc.laborer)
     if (typeof doc.otkat === 'string') setOtkat(doc.otkat)
+    if (typeof doc.overheadPercent === 'string') setOverheadPercent(doc.overheadPercent)
+    else setOverheadPercent('0')
   }, [])
 
   const refreshList = useCallback(async () => {
@@ -209,32 +223,58 @@ export function ConstructionSmetaCalculator() {
     void refreshList()
   }, [isPreview, refreshList])
 
-  const deriveTitle = useCallback(() => {
-    const parts = [header.documentNumber?.trim(), header.customerName?.trim()].filter(Boolean)
-    return parts.join(' · ') || 'Смета'
-  }, [header.customerName, header.documentNumber])
-
-  const buildPayload = useCallback((): DocState => {
+  const totals = useMemo(() => {
+    const worksSubtotal = rows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.upperPrice), 0)
+    const overheadPct = Math.max(0, toNumber(overheadPercent))
+    const overheadAmount = worksSubtotal * (overheadPct / 100)
+    const totalUpperSum = worksSubtotal + overheadAmount
+    const totalWorkerSum = rows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.workerPrice), 0)
+    const prepaymentN = toNumber(prepayment)
+    const laborerN = toNumber(laborer)
+    const otkatN = toNumber(otkat)
+    const totalExpenses = totalWorkerSum + laborerN + otkatN
+    const myIncome = totalUpperSum - totalExpenses
+    const toPay = totalUpperSum - prepaymentN
     return {
-      header,
-      rows,
-      prepayment,
-      laborer,
-      otkat,
+      worksSubtotal,
+      overheadAmount,
+      overheadPercent: overheadPct,
+      totalUpperSum,
+      totalWorkerSum,
+      prepaymentN,
+      laborerN,
+      otkatN,
+      totalExpenses,
+      myIncome,
+      toPay,
     }
-  }, [header, laborer, otkat, prepayment, rows])
+  }, [rows, prepayment, laborer, otkat, overheadPercent])
+
+  const totalsByStage = useMemo(() => {
+    const m: Record<SmetaStage, { upper: number; worker: number }> = {
+      1: { upper: 0, worker: 0 },
+      2: { upper: 0, worker: 0 },
+      3: { upper: 0, worker: 0 },
+    }
+    for (const r of rows) {
+      const st = normalizeSmetaStage(r.stage)
+      const q = toNumber(r.quantity)
+      m[st].upper += q * toNumber(r.upperPrice)
+      m[st].worker += q * toNumber(r.workerPrice)
+    }
+    return m
+  }, [rows])
 
   const handleSave = useCallback(async () => {
     setApiError('')
     setSaving(true)
     try {
-      const title = deriveTitle()
-      const payload = buildPayload()
+      const body = buildSmetaPersistBody(header, rows, prepayment, laborer, otkat, overheadPercent, totals)
       if (estimateId) {
         const res = await fetch(`/api/smeta/${estimateId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, payload }),
+          body: JSON.stringify(body),
         })
         if (!res.ok) {
           const err = (await res.json().catch(() => ({}))) as { error?: string }
@@ -245,7 +285,7 @@ export function ConstructionSmetaCalculator() {
         const res = await fetch('/api/smeta', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, payload }),
+          body: JSON.stringify(body),
         })
         const data = (await res.json().catch(() => ({}))) as { id?: number; error?: string }
         if (!res.ok) {
@@ -264,7 +304,7 @@ export function ConstructionSmetaCalculator() {
     } finally {
       setSaving(false)
     }
-  }, [buildPayload, deriveTitle, estimateId, refreshList])
+  }, [estimateId, header, laborer, otkat, overheadPercent, prepayment, refreshList, rows, totals])
 
   const handleNew = useCallback(() => {
     setEstimateId(null)
@@ -275,6 +315,7 @@ export function ConstructionSmetaCalculator() {
     setPrepayment('5000')
     setLaborer('0')
     setOtkat('5000')
+    setOverheadPercent('0')
     setApiError('')
   }, [])
 
@@ -324,6 +365,7 @@ export function ConstructionSmetaCalculator() {
       if (typeof parsed?.prepayment === "string") setPrepayment(parsed.prepayment);
       if (typeof parsed?.laborer === "string") setLaborer(parsed.laborer);
       if (typeof parsed?.otkat === "string") setOtkat(parsed.otkat);
+      if (typeof parsed?.overheadPercent === "string") setOverheadPercent(parsed.overheadPercent);
     } catch {
       // ignore malformed storage
     }
@@ -334,6 +376,9 @@ export function ConstructionSmetaCalculator() {
     setRows((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r;
+        if (field === 'stage') {
+          return { ...r, stage: normalizeSmetaStage(value) }
+        }
         if (numericFields.has(field)) {
           return { ...r, [field]: toNumber(value) };
         }
@@ -344,18 +389,23 @@ export function ConstructionSmetaCalculator() {
 
   const addRow = () => {
     const id = nextIdRef.current++
-    setRows((prev) => [
-      ...prev,
-      {
-        id,
-        name: 'Новая позиция',
-        unit: 'шт.',
-        quantity: 1,
-        workerPrice: 0,
-        upperPrice: 0,
-        column1: '',
-      },
-    ])
+    setRows((prev) => {
+      const last = prev[prev.length - 1]
+      const stage: SmetaStage = last ? normalizeSmetaStage(last.stage) : 1
+      return [
+        ...prev,
+        {
+          id,
+          stage,
+          name: 'Новая позиция',
+          unit: 'шт.',
+          quantity: 1,
+          workerPrice: 0,
+          upperPrice: 0,
+          column1: '',
+        },
+      ]
+    })
   }
 
   const deleteRow = (id: number) => {
@@ -374,27 +424,6 @@ export function ConstructionSmetaCalculator() {
       return next;
     });
   }, []);
-
-  const totals = useMemo(() => {
-    const totalUpperSum = rows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.upperPrice), 0);
-    const totalWorkerSum = rows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.workerPrice), 0);
-    const prepaymentN = toNumber(prepayment);
-    const laborerN = toNumber(laborer);
-    const otkatN = toNumber(otkat);
-    const totalExpenses = totalWorkerSum + laborerN + otkatN;
-    const myIncome = totalUpperSum - totalExpenses;
-    const toPay = totalUpperSum - prepaymentN;
-    return {
-      totalUpperSum,
-      totalWorkerSum,
-      prepaymentN,
-      laborerN,
-      otkatN,
-      totalExpenses,
-      myIncome,
-      toPay,
-    };
-  }, [rows, prepayment, laborer, otkat]);
 
   const renderPrintDocument = () => (
     <>
@@ -422,11 +451,21 @@ export function ConstructionSmetaCalculator() {
       {renderTable(true)}
 
       <div className="mt-6">
-        <div className="border-t-2 border-gray-400 pt-4 mt-4">
-          <div className="flex justify-end">
+        <div className="border-t-2 border-gray-400 pt-4 mt-4 space-y-2 text-sm text-gray-800">
+          <div className="flex justify-between">
+            <span>Итого по позициям:</span>
+            <span className="font-semibold tabular-nums">{fmt(totals.worksSubtotal)} ₽</span>
+          </div>
+          {totals.overheadAmount > 0 ? (
+            <div className="flex justify-between text-gray-600">
+              <span>Накладные ({fmt(totals.overheadPercent)}% от позиций):</span>
+              <span className="font-semibold tabular-nums">{fmt(totals.overheadAmount)} ₽</span>
+            </div>
+          ) : null}
+          <div className="flex justify-end pt-2">
             <div className="text-right">
-              <div className="text-sm text-gray-600">Итого по работам:</div>
-              <div className="text-2xl font-extrabold text-gray-900">{fmt(totals.totalUpperSum)} ₽</div>
+              <div className="text-sm text-gray-600">Всего по работам (с накладными):</div>
+              <div className="text-2xl font-extrabold text-gray-900 tabular-nums">{fmt(totals.totalUpperSum)} ₽</div>
             </div>
           </div>
         </div>
@@ -445,7 +484,7 @@ export function ConstructionSmetaCalculator() {
 
   const openPreview = () => {
     const key = makePreviewKey();
-    const state: DocState = { header, rows, prepayment, laborer, otkat };
+    const state: DocState = { header, rows, prepayment, laborer, otkat, overheadPercent };
     localStorage.setItem(key, JSON.stringify(state));
 
     const url = new URL(window.location.href);
@@ -529,15 +568,199 @@ export function ConstructionSmetaCalculator() {
   const renderTable = (printMode = false) => {
     const cellPad = printMode ? 'px-2 py-1' : 'px-0.5 py-1 sm:px-1'
     const textSize = printMode ? 'text-[11px]' : 'text-xs sm:text-sm'
+    const tbodyNodes: ReactNode[] = []
+    rows.forEach((row, idx) => {
+      const st = normalizeSmetaStage(row.stage)
+      const prev = rows[idx - 1]
+      const next = rows[idx + 1]
+      const showStageHead = !prev || normalizeSmetaStage(prev.stage) !== st
+      const showStageSub = !next || normalizeSmetaStage(next.stage) !== st
+      const qty = toNumber(row.quantity)
+      const workerPrice = toNumber(row.workerPrice)
+      const upperPrice = toNumber(row.upperPrice)
+      const wSum = qty * workerPrice
+      const uSum = qty * upperPrice
+      const stripe = idx % 2 === 0 ? 'bg-white' : 'bg-zinc-50'
+
+      if (showStageHead) {
+        tbodyNodes.push(
+          <tr key={`stage-${row.id}-head`} className="bg-zinc-200/90 text-zinc-900">
+            <td
+              colSpan={printMode ? 6 : 10}
+              className={`border border-zinc-400 ${cellPad} font-bold ${textSize}`}
+            >
+              Этап {st}
+            </td>
+          </tr>,
+        )
+      }
+
+      tbodyNodes.push(
+        <tr
+          key={row.id}
+          draggable={!printMode}
+          onDragStart={() => {
+            if (printMode) return
+            draggingRowIdRef.current = row.id
+          }}
+          onDragEnd={() => {
+            draggingRowIdRef.current = null
+          }}
+          onDragOver={(e) => {
+            if (printMode) return
+            e.preventDefault()
+          }}
+          onDrop={() => {
+            if (printMode) return
+            const fromId = draggingRowIdRef.current
+            if (fromId == null) return
+            reorderRows(fromId, row.id)
+            draggingRowIdRef.current = null
+          }}
+          className={`${stripe} transition hover:bg-blue-50`}
+        >
+          <td className={`border border-zinc-300 ${cellPad} text-center font-medium text-zinc-700`}>
+            {idx + 1}
+          </td>
+          {!printMode && (
+            <td className={`border border-gray-300 ${cellPad} p-0.5`}>
+              <Select
+                value={String(st)}
+                onValueChange={(v) => updateRow(row.id, 'stage', v)}
+              >
+                <SelectTrigger className="h-8 w-full min-w-[4.5rem] border-zinc-300 bg-white text-zinc-900 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Этап 1</SelectItem>
+                  <SelectItem value="2">Этап 2</SelectItem>
+                  <SelectItem value="3">Этап 3</SelectItem>
+                </SelectContent>
+              </Select>
+            </td>
+          )}
+          <td className={`border border-gray-300 ${cellPad}`}>
+            <EditableCell
+              value={row.name}
+              onChange={(v) => updateRow(row.id, 'name', v)}
+              className={textSize}
+            />
+          </td>
+          <td className={`border border-gray-300 ${cellPad} text-center`}>
+            <EditableCell
+              value={row.unit}
+              onChange={(v) => updateRow(row.id, 'unit', v)}
+              className={`${textSize} text-center`}
+            />
+          </td>
+          <td className={`border border-gray-300 ${cellPad} text-center`}>
+            <EditableCell
+              value={String(qty)}
+              onChange={(v) => updateRow(row.id, 'quantity', v)}
+              isNumber
+              className={`${textSize} text-center`}
+            />
+          </td>
+          {!printMode && (
+            <>
+              <td className={`border border-gray-300 ${cellPad} text-center`}>
+                <EditableCell
+                  value={String(workerPrice)}
+                  onChange={(v) => updateRow(row.id, 'workerPrice', v)}
+                  isNumber
+                  className={`${textSize} text-right`}
+                />
+              </td>
+              <td
+                className={`border border-gray-300 ${cellPad} text-right font-medium ${wSum > 0 ? 'text-amber-700' : 'text-gray-400'}`}
+              >
+                {fmt(wSum)}
+              </td>
+            </>
+          )}
+          <td className={`border border-gray-300 ${cellPad} text-center`}>
+            <EditableCell
+              value={String(upperPrice)}
+              onChange={(v) => updateRow(row.id, 'upperPrice', v)}
+              isNumber
+              className={`${textSize} text-right`}
+            />
+          </td>
+          <td className={`border border-gray-300 ${cellPad} text-right font-bold text-blue-800`}>
+            {fmt(uSum)}
+          </td>
+          {!printMode && (
+            <td className={`border border-gray-300 ${cellPad} text-center no-print`}>
+              <div className="flex items-center justify-center gap-1">
+                <button
+                  className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition"
+                  title="Перетащите строку"
+                  onMouseDown={() => {
+                    draggingRowIdRef.current = row.id
+                  }}
+                  onClick={(e) => e.preventDefault()}
+                  type="button"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M7 4a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 10a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 16a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => deleteRow(row.id)}
+                  className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition"
+                  title="Удалить"
+                  type="button"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          )}
+        </tr>,
+      )
+
+      if (showStageSub) {
+        const sub = totalsByStage[st]
+        tbodyNodes.push(
+          <tr key={`stage-${row.id}-sub`} className="bg-sky-50/90 font-semibold text-zinc-800">
+            {printMode ? (
+              <>
+                <td colSpan={4} className={`border border-zinc-400 ${cellPad} text-right`}>
+                  Итого по этапу {st}:
+                </td>
+                <td className={`border border-zinc-400 ${cellPad} text-center text-zinc-400`}>—</td>
+                <td className={`border border-zinc-400 ${cellPad} text-right text-blue-900`}>{fmt(sub.upper)}</td>
+              </>
+            ) : (
+              <>
+                <td colSpan={5} className={`border border-zinc-400 ${cellPad} text-right`}>
+                  Итого по этапу {st}:
+                </td>
+                <td className={`border border-zinc-400 ${cellPad} text-center text-zinc-400`}>—</td>
+                <td className={`border border-zinc-400 ${cellPad} text-right text-amber-800`}>{fmt(sub.worker)}</td>
+                <td className={`border border-zinc-400 ${cellPad} text-center text-zinc-400`}>—</td>
+                <td className={`border border-zinc-400 ${cellPad} text-right text-blue-900`}>{fmt(sub.upper)}</td>
+                <td className={`border border-zinc-400 ${cellPad} no-print`} />
+              </>
+            )}
+          </tr>,
+        )
+      }
+    })
 
     return (
       <div className="max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
         <table
-          className={`w-full border-collapse print-table ${textSize} ${printMode ? '' : 'min-w-[720px]'}`}
+          className={`w-full border-collapse print-table ${textSize} ${printMode ? '' : 'min-w-[780px]'}`}
         >
           <thead>
             <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
               <th className={`border border-blue-700 ${cellPad} w-10 text-center`}>№</th>
+              {!printMode && (
+                <th className={`border border-blue-700 ${cellPad} w-[5.5rem] text-center`}>Этап</th>
+              )}
               <th className={`border border-blue-700 ${cellPad} min-w-[120px] sm:min-w-[200px]`}>
                 Наименование работ
               </th>
@@ -554,140 +777,80 @@ export function ConstructionSmetaCalculator() {
               {!printMode && <th className={`border border-blue-700 ${cellPad} w-28 text-center`}>Действия</th>}
             </tr>
           </thead>
-          <tbody>
-            {rows.map((row, idx) => {
-              const qty = toNumber(row.quantity);
-              const workerPrice = toNumber(row.workerPrice);
-              const upperPrice = toNumber(row.upperPrice);
-              const wSum = qty * workerPrice;
-              const uSum = qty * upperPrice;
-              return (
-                <tr
-                  key={row.id}
-                  draggable={!printMode}
-                  onDragStart={() => {
-                    if (printMode) return;
-                    draggingRowIdRef.current = row.id;
-                  }}
-                  onDragEnd={() => {
-                    draggingRowIdRef.current = null;
-                  }}
-                  onDragOver={(e) => {
-                    if (printMode) return;
-                    // allow drop
-                    e.preventDefault();
-                  }}
-                  onDrop={() => {
-                    if (printMode) return;
-                    const fromId = draggingRowIdRef.current;
-                    if (fromId == null) return;
-                    reorderRows(fromId, row.id);
-                    draggingRowIdRef.current = null;
-                  }}
-                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-zinc-50'} transition hover:bg-blue-50`}
-                >
-                  <td className={`border border-zinc-300 ${cellPad} text-center font-medium text-zinc-700`}>
-                    {idx + 1}
-                  </td>
-                  <td className={`border border-gray-300 ${cellPad}`}>
-                    <EditableCell
-                      value={row.name}
-                      onChange={(v) => updateRow(row.id, "name", v)}
-                      className={textSize}
-                    />
-                  </td>
-                  <td className={`border border-gray-300 ${cellPad} text-center`}>
-                    <EditableCell
-                      value={row.unit}
-                      onChange={(v) => updateRow(row.id, "unit", v)}
-                      className={`${textSize} text-center`}
-                    />
-                  </td>
-                  <td className={`border border-gray-300 ${cellPad} text-center`}>
-                    <EditableCell
-                      value={String(qty)}
-                      onChange={(v) => updateRow(row.id, "quantity", v)}
-                      isNumber
-                      className={`${textSize} text-center`}
-                    />
-                  </td>
-                  {!printMode && (
-                    <>
-                      <td className={`border border-gray-300 ${cellPad} text-center`}>
-                        <EditableCell
-                          value={String(workerPrice)}
-                          onChange={(v) => updateRow(row.id, "workerPrice", v)}
-                          isNumber
-                          className={`${textSize} text-right`}
-                        />
-                      </td>
-                      <td className={`border border-gray-300 ${cellPad} text-right font-medium ${wSum > 0 ? "text-amber-700" : "text-gray-400"}`}>
-                        {fmt(wSum)}
-                      </td>
-                    </>
-                  )}
-                  <td className={`border border-gray-300 ${cellPad} text-center`}>
-                    <EditableCell
-                      value={String(upperPrice)}
-                      onChange={(v) => updateRow(row.id, "upperPrice", v)}
-                      isNumber
-                      className={`${textSize} text-right`}
-                    />
-                  </td>
-                  <td className={`border border-gray-300 ${cellPad} text-right font-bold text-blue-800`}>
-                    {fmt(uSum)}
-                  </td>
-                  {!printMode && (
-                    <td className={`border border-gray-300 ${cellPad} text-center no-print`}>
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition"
-                          title="Перетащите строку"
-                          onMouseDown={() => {
-                            // ensure the next dragstart comes from this row
-                            draggingRowIdRef.current = row.id;
-                          }}
-                          onClick={(e) => e.preventDefault()}
-                          type="button"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                            <path d="M7 4a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 10a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 16a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => deleteRow(row.id)}
-                          className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition"
-                          title="Удалить"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
+          <tbody>{tbodyNodes}</tbody>
           <tfoot>
-            <tr className="bg-blue-50 font-bold">
-              <td colSpan={printMode ? 4 : 6} className={`border border-gray-300 ${cellPad} text-right text-blue-800`}>
-                ИТОГО по работам:
+            <tr className="bg-blue-50 font-semibold">
+              <td colSpan={printMode ? 4 : 5} className={`border border-gray-300 ${cellPad} text-right text-blue-900`}>
+                Итого по позициям:
               </td>
               {!printMode && (
-                <td className={`border border-gray-300 ${cellPad} text-right text-amber-700`}>
-                  {fmt(totals.totalWorkerSum)}
+                <>
+                  <td className={`border border-gray-300 ${cellPad} text-center text-zinc-400`}>—</td>
+                  <td className={`border border-gray-300 ${cellPad} text-right text-amber-800`}>
+                    {fmt(totals.totalWorkerSum)}
+                  </td>
+                  <td className={`border border-gray-300 ${cellPad} text-center text-zinc-400`}>—</td>
+                </>
+              )}
+              {!printMode && (
+                <td className={`border border-gray-300 ${cellPad} text-right text-blue-900`}>
+                  {fmt(totals.worksSubtotal)}
                 </td>
               )}
-              <td className={`border border-gray-300 ${cellPad} text-right text-blue-900 text-base`}>
-                {fmt(totals.totalUpperSum)}
+              {printMode && (
+                <td className={`border border-gray-300 ${cellPad} text-right text-blue-900`}>
+                  {fmt(totals.worksSubtotal)}
+                </td>
+              )}
+              {!printMode && <td className={`border border-gray-300 ${cellPad} no-print`} />}
+            </tr>
+            {totals.overheadAmount > 0 && (
+              <tr className="bg-blue-50/80 font-semibold">
+                <td colSpan={printMode ? 4 : 8} className={`border border-gray-300 ${cellPad} text-right text-zinc-700`}>
+                  Накладные ({fmt(totals.overheadPercent)}%):
+                </td>
+                {printMode ? (
+                  <>
+                    <td className={`border border-gray-300 ${cellPad} text-center text-zinc-400`}>—</td>
+                    <td className={`border border-gray-300 ${cellPad} text-right text-blue-900`}>
+                      {fmt(totals.overheadAmount)}
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className={`border border-gray-300 ${cellPad} text-right text-blue-900`}>
+                      {fmt(totals.overheadAmount)}
+                    </td>
+                    <td className={`border border-gray-300 ${cellPad} no-print`} />
+                  </>
+                )}
+              </tr>
+            )}
+            <tr className="bg-blue-100 font-bold">
+              <td colSpan={printMode ? 4 : 8} className={`border border-gray-300 ${cellPad} text-right text-blue-950`}>
+                Всего (с накладными):
               </td>
-              {!printMode && <td className="border border-gray-300 no-print"></td>}
+              {printMode ? (
+                <>
+                  <td className={`border border-gray-300 ${cellPad} text-center text-zinc-400`}>—</td>
+                  <td className={`border border-gray-300 ${cellPad} text-right text-blue-950 text-base`}>
+                    {fmt(totals.totalUpperSum)}
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td className={`border border-gray-300 ${cellPad} text-right text-blue-950 text-base`}>
+                    {fmt(totals.totalUpperSum)}
+                  </td>
+                  <td className={`border border-gray-300 ${cellPad} no-print`} />
+                </>
+              )}
             </tr>
           </tfoot>
         </table>
       </div>
-    );
-  };
+    )
+  }
 
   if (isPreview) {
     return (
@@ -913,6 +1076,26 @@ export function ConstructionSmetaCalculator() {
 
         {/* Main table card (screen) */}
         <div className="no-print mb-6 w-full min-w-0 rounded-2xl border border-zinc-200 bg-white p-2 shadow-md sm:p-4 md:p-5">
+          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-zinc-100 bg-zinc-50/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-zinc-800">Накладные расходы</p>
+              <p className="text-xs text-zinc-500">Процент от суммы всех позиций (колонка «Сумма»). Добавляется к итогу.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                inputMode="decimal"
+                className="w-24 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-right font-semibold text-zinc-900 tabular-nums outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400"
+                value={overheadPercent}
+                onChange={(e) => setOverheadPercent(e.target.value)}
+                aria-label="Процент накладных расходов"
+              />
+              <span className="text-sm font-medium text-zinc-600">%</span>
+              <span className="text-sm text-zinc-600">
+                → <span className="font-semibold tabular-nums text-zinc-900">{fmt(totals.overheadAmount)}</span> ₽
+              </span>
+            </div>
+          </div>
           <div className="-mx-0 min-w-0 overflow-x-auto overscroll-x-contain sm:mx-0">
             {renderTable(false)}
           </div>
@@ -1002,12 +1185,22 @@ export function ConstructionSmetaCalculator() {
             </h3>
             <div className="space-y-2">
               <div className="flex justify-between text-blue-100 text-sm">
-                <span>Общая сумма:</span>
-                <span className="font-semibold">{fmt(totals.totalUpperSum)} ₽</span>
+                <span>Сумма позиций:</span>
+                <span className="font-semibold tabular-nums">{fmt(totals.worksSubtotal)} ₽</span>
+              </div>
+              {totals.overheadAmount > 0 ? (
+                <div className="flex justify-between text-blue-100 text-sm">
+                  <span>Накладные ({fmt(totals.overheadPercent)}%):</span>
+                  <span className="font-semibold tabular-nums">{fmt(totals.overheadAmount)} ₽</span>
+                </div>
+              ) : null}
+              <div className="flex justify-between text-blue-100 text-sm border-t border-blue-500/50 pt-1">
+                <span>Итого (с накладными):</span>
+                <span className="font-semibold tabular-nums">{fmt(totals.totalUpperSum)} ₽</span>
               </div>
               <div className="flex justify-between text-blue-100 text-sm">
                 <span>Расходы:</span>
-                <span className="font-semibold">{fmt(totals.totalExpenses)} ₽</span>
+                <span className="font-semibold tabular-nums">{fmt(totals.totalExpenses)} ₽</span>
               </div>
               <div className="border-t border-blue-500 pt-2 mt-2">
                 <div className="flex justify-between items-end">
