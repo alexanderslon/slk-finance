@@ -1,6 +1,6 @@
 /** Состояние калькулятора смет (construction app). */
 
-export type SmetaStage = 1 | 2 | 3
+export type SmetaStage = 1 | 2 | 3 | 4
 
 export interface RowData {
   id: number
@@ -63,7 +63,7 @@ export const SMETA_INITIAL_ROWS: RowData[] = [
   row(18, 3, { name: 'Установка межкомнатной двери в санузел', unit: 'шт.', quantity: 2, workerPrice: 0, upperPrice: 9000, column1: '' }),
   row(19, 3, { name: 'Облицовка лестницы деревянными ступенями (работа)', unit: 'ступ.', quantity: 8, workerPrice: 0, upperPrice: 6000, column1: '' }),
   row(20, 3, { name: 'Установка розеток / выключателей / проходных / бра', unit: 'шт.', quantity: 38, workerPrice: 0, upperPrice: 500, column1: '' }),
-  row(21, 3, { name: 'Вывоз строительного мусора (новое)', unit: '—', quantity: 1, workerPrice: 6000, upperPrice: 22000, column1: '' }),
+  row(21, 4, { name: 'Вывоз строительного мусора (новое)', unit: '—', quantity: 1, workerPrice: 6000, upperPrice: 22000, column1: '' }),
 ]
 
 export function defaultHeader(): HeaderData {
@@ -87,5 +87,6 @@ export function normalizeSmetaStage(v: unknown): SmetaStage {
   const n = typeof v === 'number' ? v : typeof v === 'string' ? parseInt(v, 10) : NaN
   if (n === 2) return 2
   if (n === 3) return 3
+  if (n === 4) return 4
   return 1
 }

@@ -255,6 +255,7 @@ export function ConstructionSmetaCalculator() {
       1: { upper: 0, worker: 0 },
       2: { upper: 0, worker: 0 },
       3: { upper: 0, worker: 0 },
+      4: { upper: 0, worker: 0 },
     }
     for (const r of rows) {
       const st = normalizeSmetaStage(r.stage)
@@ -635,6 +636,7 @@ export function ConstructionSmetaCalculator() {
                   <SelectItem value="1">Этап 1</SelectItem>
                   <SelectItem value="2">Этап 2</SelectItem>
                   <SelectItem value="3">Этап 3</SelectItem>
+                  <SelectItem value="4">Этап 4</SelectItem>
                 </SelectContent>
               </Select>
             </td>
