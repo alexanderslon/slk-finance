@@ -15,13 +15,16 @@ import {
 } from '@/components/ui/select'
 import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-types'
 import {
-  SMETA_ALL_STAGES,
+  ADDITIONAL_WORK_STAGE,
   SMETA_INITIAL_ROWS,
+  SMETA_MAIN_STAGES,
+  SMETA_STAGE_ORDER,
   defaultHeader,
   firstEnabledStage,
   nextRowIdFromRows,
   normalizeEnabledStages,
   normalizeSmetaStage,
+  stageLabel,
 } from '@/lib/smeta-types'
 import { buildSmetaPersistBody } from '@/lib/smeta-api-body'
 import { Trash2 } from 'lucide-react'
@@ -195,7 +198,7 @@ export function ConstructionSmetaCalculator() {
   const [laborer, setLaborer] = useState<string>('0')
   const [otkat, setOtkat] = useState<string>('5000')
   const [overheadPercent, setOverheadPercent] = useState<string>('0')
-  const [enabledStages, setEnabledStages] = useState<SmetaStage[]>(() => [...SMETA_ALL_STAGES])
+  const [enabledStages, setEnabledStages] = useState<SmetaStage[]>(() => [...SMETA_MAIN_STAGES])
   const nextIdRef = useRef(nextRowIdFromRows(SMETA_INITIAL_ROWS))
   const draggingRowIdRef = useRef<number | null>(null)
   const printContentRef = useRef<HTMLDivElement | null>(null)
@@ -293,6 +296,7 @@ export function ConstructionSmetaCalculator() {
       2: { upper: 0, worker: 0 },
       3: { upper: 0, worker: 0 },
       4: { upper: 0, worker: 0 },
+      5: { upper: 0, worker: 0 },
     }
     for (const r of visibleRows) {
       const st = normalizeSmetaStage(r.stage)
@@ -363,7 +367,7 @@ export function ConstructionSmetaCalculator() {
     setLaborer('0')
     setOtkat('5000')
     setOverheadPercent('0')
-    setEnabledStages([...SMETA_ALL_STAGES])
+    setEnabledStages([...SMETA_MAIN_STAGES])
     setApiError('')
   }, [])
 
@@ -371,7 +375,9 @@ export function ConstructionSmetaCalculator() {
     setEnabledStages((prev) => {
       if (checked) {
         if (prev.includes(st)) return prev
-        return [...prev, st].sort((a, b) => a - b)
+        return [...prev, st].sort(
+          (a, b) => SMETA_STAGE_ORDER.indexOf(a) - SMETA_STAGE_ORDER.indexOf(b),
+        )
       }
       if (prev.length <= 1) return prev
       return prev.filter((x) => x !== st)
@@ -474,7 +480,9 @@ export function ConstructionSmetaCalculator() {
         indexed.sort((a, b) => {
           const sa = normalizeSmetaStage(a.r.stage)
           const sb = normalizeSmetaStage(b.r.stage)
-          if (sa !== sb) return sa - sb
+          if (sa !== sb) {
+            return SMETA_STAGE_ORDER.indexOf(sa) - SMETA_STAGE_ORDER.indexOf(sb)
+          }
           return a.idx - b.idx
         })
         return indexed.map(({ r }) => r)
@@ -743,7 +751,7 @@ export function ConstructionSmetaCalculator() {
               colSpan={printMode ? 6 : 10}
               className={`border border-zinc-400 ${cellPad} font-bold ${textSize}`}
             >
-              Этап {st}
+              {stageLabel(st)}
             </td>
           </tr>,
         )
@@ -788,7 +796,7 @@ export function ConstructionSmetaCalculator() {
                 <SelectContent>
                   {enabledStages.map((es) => (
                     <SelectItem key={es} value={String(es)}>
-                      Этап {es}
+                      {stageLabel(es)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -884,7 +892,7 @@ export function ConstructionSmetaCalculator() {
             {printMode ? (
               <>
                 <td colSpan={4} className={`border border-zinc-400 ${cellPad} text-right`}>
-                  Итого по этапу {st}:
+                  {st === ADDITIONAL_WORK_STAGE ? 'Итого (доп. работы):' : `Итого по этапу ${st}:`}
                 </td>
                 <td className={`border border-zinc-400 ${cellPad} text-center text-zinc-400`}>—</td>
                 <td className={`border border-zinc-400 ${cellPad} text-right text-blue-900`}>{fmt(sub.upper)}</td>
@@ -892,7 +900,7 @@ export function ConstructionSmetaCalculator() {
             ) : (
               <>
                 <td colSpan={5} className={`border border-zinc-400 ${cellPad} text-right`}>
-                  Итого по этапу {st}:
+                  {st === ADDITIONAL_WORK_STAGE ? 'Итого (доп. работы):' : `Итого по этапу ${st}:`}
                 </td>
                 <td className={`border border-zinc-400 ${cellPad} text-center text-zinc-400`}>—</td>
                 <td className={`border border-zinc-400 ${cellPad} text-right text-amber-800`}>{fmt(sub.worker)}</td>
@@ -1271,7 +1279,7 @@ export function ConstructionSmetaCalculator() {
               </p>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
-              {SMETA_ALL_STAGES.map((st) => {
+              {SMETA_MAIN_STAGES.map((st) => {
                 const onlyOne = enabledStages.length === 1 && enabledStages[0] === st
                 return (
                   <label
@@ -1288,6 +1296,24 @@ export function ConstructionSmetaCalculator() {
                   </label>
                 )
               })}
+              <label
+                key={ADDITIONAL_WORK_STAGE}
+                className={`flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 ${
+                  enabledStages.length === 1 && enabledStages[0] === ADDITIONAL_WORK_STAGE ? 'opacity-90' : ''
+                }`}
+              >
+                <Checkbox
+                  checked={enabledStages.includes(ADDITIONAL_WORK_STAGE)}
+                  disabled={enabledStages.length === 1 && enabledStages[0] === ADDITIONAL_WORK_STAGE}
+                  onCheckedChange={(c) => toggleStageEnabled(ADDITIONAL_WORK_STAGE, c === true)}
+                  aria-label={`Доп. работы${
+                    enabledStages.length === 1 && enabledStages[0] === ADDITIONAL_WORK_STAGE
+                      ? ', нельзя отключить последний этап'
+                      : ''
+                  }`}
+                />
+                <span>Доп. работы</span>
+              </label>
             </div>
             {hiddenRowsCount > 0 ? (
               <p className="text-xs text-amber-800">

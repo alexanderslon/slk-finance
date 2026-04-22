@@ -1,9 +1,16 @@
 /** Состояние калькулятора смет (construction app). */
 
-export type SmetaStage = 1 | 2 | 3 | 4
+/** 1–4 — основные этапы, 5 — дополнительные работы. */
+export type SmetaStage = 1 | 2 | 3 | 4 | 5
 
-/** Все этапы по порядку (для сортировки и UI). */
-export const SMETA_ALL_STAGES: readonly SmetaStage[] = [1, 2, 3, 4]
+/** Основные этапы (чекбоксы 1–4). */
+export const SMETA_MAIN_STAGES: readonly SmetaStage[] = [1, 2, 3, 4]
+
+/** Этап «доп. работы». */
+export const ADDITIONAL_WORK_STAGE = 5 as const satisfies SmetaStage
+
+/** Порядок этапов в таблице и сортировке строк. */
+export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5]
 
 export interface RowData {
   id: number
@@ -35,7 +42,7 @@ export interface DocState {
   otkat: string
   /** Накладные расходы, % от суммы всех позиций (верхняя колонка). */
   overheadPercent: string
-  /** Какие этапы участвуют в смете и расчёте (минимум один). Остальные скрыты. В старых сохранениях может отсутствовать — тогда считаются все 4. */
+  /** Какие этапы участвуют в смете и расчёте (минимум один). Остальные скрыты. В старых сохранениях может отсутствовать — тогда считаются основные этапы 1–4. */
   enabledStages?: SmetaStage[]
 }
 
@@ -93,24 +100,29 @@ export function normalizeSmetaStage(v: unknown): SmetaStage {
   if (n === 2) return 2
   if (n === 3) return 3
   if (n === 4) return 4
+  if (n === 5) return 5
   return 1
 }
 
-/** Нормализация списка активных этапов: непустой подмножество {1..4}, порядок 1→4. */
+/** Нормализация списка активных этапов: непустой подмножество {1..5}, порядок фиксированный. */
 export function normalizeEnabledStages(raw: unknown): SmetaStage[] {
-  if (!raw || !Array.isArray(raw)) return [...SMETA_ALL_STAGES]
+  if (!raw || !Array.isArray(raw)) return [...SMETA_MAIN_STAGES]
   const picked = new Set<SmetaStage>()
   for (const x of raw) {
     const s = normalizeSmetaStage(x)
-    if (SMETA_ALL_STAGES.includes(s)) picked.add(s)
+    if (SMETA_STAGE_ORDER.includes(s)) picked.add(s)
   }
   if (picked.size === 0) return [1]
-  return SMETA_ALL_STAGES.filter((s) => picked.has(s))
+  return SMETA_STAGE_ORDER.filter((s) => picked.has(s))
 }
 
 export function firstEnabledStage(stages: readonly SmetaStage[]): SmetaStage {
-  for (const s of SMETA_ALL_STAGES) {
+  for (const s of SMETA_STAGE_ORDER) {
     if (stages.includes(s)) return s
   }
   return 1
+}
+
+export function stageLabel(st: SmetaStage): string {
+  return st === ADDITIONAL_WORK_STAGE ? 'Доп. работы' : `Этап ${st}`
 }
