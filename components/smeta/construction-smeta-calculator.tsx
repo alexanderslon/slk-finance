@@ -129,51 +129,51 @@ function EditableCell({
   isNumber?: boolean;
   className?: string;
 }) {
-  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const skipBlurCommitRef = useRef(false);
 
-  const startEdit = () => {
+  useEffect(() => {
     setDraft(value);
-    setEditing(true);
-    setTimeout(() => inputRef.current?.select(), 0);
-  };
+  }, [value]);
 
   const commit = () => {
-    setEditing(false);
     if (isNumber) {
       const parsed = toNumber(draft);
       onChange(String(parsed));
+      setDraft(String(parsed));
     } else {
       onChange(draft);
     }
   };
 
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        className={`w-full border border-blue-400 bg-white text-zinc-900 rounded px-2 py-1 text-sm outline-none ${className ?? ''}`}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") setEditing(false);
-        }}
-        autoFocus
-      />
-    );
-  }
-
   return (
-    <div
-      className={`cursor-pointer px-2 py-1 text-zinc-900 rounded hover:bg-blue-50 min-h-[28px] flex items-center ${className ?? ''}`}
-      onDoubleClick={startEdit}
-      title="Двойной клик для редактирования"
-    >
-      {isNumber ? fmt(parseFloat(value) || 0) : value}
-    </div>
+    <input
+      type="text"
+      inputMode={isNumber ? 'decimal' : undefined}
+      autoComplete="off"
+      className={`w-full min-h-[28px] border border-transparent bg-transparent px-2 py-1 text-zinc-900 rounded outline-none transition-colors hover:bg-blue-50/70 focus:border-blue-400 focus:bg-white focus:ring-0 ${className ?? ''}`}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (skipBlurCommitRef.current) {
+          skipBlurCommitRef.current = false;
+          return;
+        }
+        commit();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          ;(e.currentTarget as HTMLInputElement).blur();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          skipBlurCommitRef.current = true;
+          setDraft(value);
+          ;(e.currentTarget as HTMLInputElement).blur();
+        }
+      }}
+    />
   );
 }
 
@@ -660,6 +660,15 @@ export function ConstructionSmetaCalculator() {
     searchParams,
   ])
 
+  /** Вернуться из предпросмотра: `window.close()` не работает после обычного `router.push` в той же вкладке. */
+  const closePreview = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('preview')
+    params.delete('doc')
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname)
+  }, [pathname, router, searchParams])
+
   const runSystemPrint = useCallback(() => {
     const restore = () => {
       document.querySelectorAll<HTMLElement>(".no-print").forEach((node) => {
@@ -1118,7 +1127,7 @@ export function ConstructionSmetaCalculator() {
                 {exporting ? "Подождите..." : "Скачать JPG"}
               </button>
               <button
-                onClick={() => window.close()}
+                onClick={closePreview}
                 className="inline-flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition active:scale-95"
                 type="button"
               >
