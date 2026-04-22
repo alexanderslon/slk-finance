@@ -1,7 +1,7 @@
 /** Состояние калькулятора смет (construction app). */
 
-/** 1–4 — основные этапы, 5 — дополнительные работы. */
-export type SmetaStage = 1 | 2 | 3 | 4 | 5
+/** 1–4 — основные этапы, 5 — доп. работы, 6 — материалы. */
+export type SmetaStage = 1 | 2 | 3 | 4 | 5 | 6
 
 /** Основные этапы (чекбоксы 1–4). */
 export const SMETA_MAIN_STAGES: readonly SmetaStage[] = [1, 2, 3, 4]
@@ -9,8 +9,11 @@ export const SMETA_MAIN_STAGES: readonly SmetaStage[] = [1, 2, 3, 4]
 /** Этап «доп. работы». */
 export const ADDITIONAL_WORK_STAGE = 5 as const satisfies SmetaStage
 
+/** Этап «материалы». */
+export const MATERIALS_STAGE = 6 as const satisfies SmetaStage
+
 /** Порядок этапов в таблице и сортировке строк. */
-export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5]
+export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5, 6]
 
 export interface RowData {
   id: number
@@ -101,10 +104,11 @@ export function normalizeSmetaStage(v: unknown): SmetaStage {
   if (n === 3) return 3
   if (n === 4) return 4
   if (n === 5) return 5
+  if (n === 6) return 6
   return 1
 }
 
-/** Нормализация списка активных этапов: непустой подмножество {1..5}, порядок фиксированный. */
+/** Нормализация списка активных этапов: непустой подмножество {1..6}, порядок фиксированный. */
 export function normalizeEnabledStages(raw: unknown): SmetaStage[] {
   if (!raw || !Array.isArray(raw)) return [...SMETA_MAIN_STAGES]
   const picked = new Set<SmetaStage>()
@@ -124,5 +128,14 @@ export function firstEnabledStage(stages: readonly SmetaStage[]): SmetaStage {
 }
 
 export function stageLabel(st: SmetaStage): string {
-  return st === ADDITIONAL_WORK_STAGE ? 'Доп. работы' : `Этап ${st}`
+  if (st === ADDITIONAL_WORK_STAGE) return 'Доп. работы'
+  if (st === MATERIALS_STAGE) return 'Материалы'
+  return `Этап ${st}`
+}
+
+/** Подпись строки итога по блоку этапа (таблица / печать). */
+export function stageSubtotalLabel(st: SmetaStage): string {
+  if (st === ADDITIONAL_WORK_STAGE) return 'Итого (доп. работы):'
+  if (st === MATERIALS_STAGE) return 'Итого (материалы):'
+  return `Итого по этапу ${st}:`
 }

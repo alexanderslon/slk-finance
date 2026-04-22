@@ -16,6 +16,7 @@ import {
 import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-types'
 import {
   ADDITIONAL_WORK_STAGE,
+  MATERIALS_STAGE,
   SMETA_INITIAL_ROWS,
   SMETA_MAIN_STAGES,
   SMETA_STAGE_ORDER,
@@ -25,6 +26,7 @@ import {
   normalizeEnabledStages,
   normalizeSmetaStage,
   stageLabel,
+  stageSubtotalLabel,
 } from '@/lib/smeta-types'
 import { buildSmetaPersistBody } from '@/lib/smeta-api-body'
 import { Trash2 } from 'lucide-react'
@@ -297,6 +299,7 @@ export function ConstructionSmetaCalculator() {
       3: { upper: 0, worker: 0 },
       4: { upper: 0, worker: 0 },
       5: { upper: 0, worker: 0 },
+      6: { upper: 0, worker: 0 },
     }
     for (const r of visibleRows) {
       const st = normalizeSmetaStage(r.stage)
@@ -892,7 +895,7 @@ export function ConstructionSmetaCalculator() {
             {printMode ? (
               <>
                 <td colSpan={4} className={`border border-zinc-400 ${cellPad} text-right`}>
-                  {st === ADDITIONAL_WORK_STAGE ? 'Итого (доп. работы):' : `Итого по этапу ${st}:`}
+                  {stageSubtotalLabel(st)}
                 </td>
                 <td className={`border border-zinc-400 ${cellPad} text-center text-zinc-400`}>—</td>
                 <td className={`border border-zinc-400 ${cellPad} text-right text-blue-900`}>{fmt(sub.upper)}</td>
@@ -900,7 +903,7 @@ export function ConstructionSmetaCalculator() {
             ) : (
               <>
                 <td colSpan={5} className={`border border-zinc-400 ${cellPad} text-right`}>
-                  {st === ADDITIONAL_WORK_STAGE ? 'Итого (доп. работы):' : `Итого по этапу ${st}:`}
+                  {stageSubtotalLabel(st)}
                 </td>
                 <td className={`border border-zinc-400 ${cellPad} text-center text-zinc-400`}>—</td>
                 <td className={`border border-zinc-400 ${cellPad} text-right text-amber-800`}>{fmt(sub.worker)}</td>
@@ -1313,6 +1316,24 @@ export function ConstructionSmetaCalculator() {
                   }`}
                 />
                 <span>Доп. работы</span>
+              </label>
+              <label
+                key={MATERIALS_STAGE}
+                className={`flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 ${
+                  enabledStages.length === 1 && enabledStages[0] === MATERIALS_STAGE ? 'opacity-90' : ''
+                }`}
+              >
+                <Checkbox
+                  checked={enabledStages.includes(MATERIALS_STAGE)}
+                  disabled={enabledStages.length === 1 && enabledStages[0] === MATERIALS_STAGE}
+                  onCheckedChange={(c) => toggleStageEnabled(MATERIALS_STAGE, c === true)}
+                  aria-label={`Материалы${
+                    enabledStages.length === 1 && enabledStages[0] === MATERIALS_STAGE
+                      ? ', нельзя отключить последний этап'
+                      : ''
+                  }`}
+                />
+                <span>Материалы</span>
               </label>
             </div>
             {hiddenRowsCount > 0 ? (
