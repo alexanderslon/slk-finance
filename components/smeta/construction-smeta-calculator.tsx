@@ -1275,7 +1275,7 @@ export function ConstructionSmetaCalculator() {
   }
 
   return (
-    <div className="smeta-calculator smeta-calculator-root min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-100 to-blue-50 text-zinc-900 [color-scheme:light]">
+    <div className="smeta-calculator smeta-calculator-root w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-100 to-blue-50 text-zinc-900 [color-scheme:light]">
       <div data-print-root className="print-only">
         {renderPrintDocument()}
       </div>
@@ -1284,10 +1284,10 @@ export function ConstructionSmetaCalculator() {
       <div className="print-container mx-auto w-full min-w-0 max-w-[1400px] px-2 pb-4 pt-0 sm:px-3 sm:pb-6 md:px-6 md:py-6">
         {/* Header bar */}
         <div className="no-print mb-6">
-          <div className="mb-4 rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="min-w-0 flex-1 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Сохранённые сметы</p>
+          <div className="mb-3 rounded-2xl border border-zinc-200 bg-white p-2.5 shadow-sm sm:mb-4 sm:p-4">
+            <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-stretch lg:justify-between">
+              <div className="min-w-0 space-y-2 lg:flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Сохранённые сметы</p>
                 <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                   <Select
                     value={listSelect || undefined}
@@ -1334,7 +1334,7 @@ export function ConstructionSmetaCalculator() {
                   </Button>
                 </div>
               </div>
-              <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+              <div className="flex w-full min-w-0 flex-col gap-1.5 sm:gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-stretch">
                 <Button
                   type="button"
                   className="w-full shrink-0 sm:w-auto"

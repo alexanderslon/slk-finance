@@ -6,7 +6,7 @@ export default function AdminSmetaPage() {
     <div className="min-w-0 max-w-full">
       <Suspense
         fallback={
-          <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">
             Загрузка калькулятора…
           </div>
         }
