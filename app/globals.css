@@ -203,3 +203,11 @@
 .smeta-calculator-root :where(input, textarea) {
   color: #18181b;
 }
+
+/* Смета: предпросмотр/экспорт — длинные строки в ячейках, не в однострочном input */
+.smeta-print-capture th,
+.smeta-print-capture td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}

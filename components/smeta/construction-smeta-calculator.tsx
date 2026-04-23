@@ -123,11 +123,17 @@ function EditableCell({
   onChange,
   isNumber,
   className,
+  staticDisplay,
+  multiline,
 }: {
   value: string;
   onChange: (val: string) => void;
   isNumber?: boolean;
   className?: string;
+  /** Предпросмотр / печать: не `<input>` (одна строка), а многострочный текст с переносом. */
+  staticDisplay?: boolean;
+  /** Редактирование: длинные наименования — `textarea` с переносами. */
+  multiline?: boolean;
 }) {
   const [draft, setDraft] = useState(value);
   const skipBlurCommitRef = useRef(false);
@@ -146,13 +152,53 @@ function EditableCell({
     }
   };
 
+  if (staticDisplay) {
+    const text = isNumber ? fmt(toNumber(value)) : value
+    return (
+      <div
+        className={`min-h-[24px] w-full min-w-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] px-2 py-1 text-zinc-900 ${className ?? ''}`}
+      >
+        {text}
+      </div>
+    );
+  }
+
+  if (multiline && !isNumber) {
+    return (
+      <textarea
+        autoComplete="off"
+        draggable={false}
+        rows={3}
+        className={`w-full min-h-[3.25rem] max-w-full resize-y border border-transparent bg-transparent px-2 py-1 text-zinc-900 rounded outline-none transition-colors hover:bg-blue-50/70 focus:border-blue-400 focus:bg-white focus:ring-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${className ?? ''}`}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onDragStart={(e) => e.preventDefault()}
+        onBlur={() => {
+          if (skipBlurCommitRef.current) {
+            skipBlurCommitRef.current = false;
+            return;
+          }
+          commit();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            skipBlurCommitRef.current = true;
+            setDraft(value);
+            ;(e.currentTarget as HTMLTextAreaElement).blur();
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <input
       type="text"
       inputMode={isNumber ? 'decimal' : undefined}
       autoComplete="off"
       draggable={false}
-      className={`w-full min-h-[28px] border border-transparent bg-transparent px-2 py-1 text-zinc-900 rounded outline-none transition-colors hover:bg-blue-50/70 focus:border-blue-400 focus:bg-white focus:ring-0 ${className ?? ''}`}
+      className={`w-full min-h-[28px] max-w-full border border-transparent bg-transparent px-2 py-1 text-zinc-900 rounded outline-none transition-colors hover:bg-blue-50/70 focus:border-blue-400 focus:bg-white focus:ring-0 ${className ?? ''}`}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onDragStart={(e) => {
@@ -835,26 +881,34 @@ export function ConstructionSmetaCalculator() {
               </Select>
             </td>
           )}
-          <td className={`border border-gray-300 ${cellPad}`}>
+          <td
+            className={`border border-gray-300 ${cellPad} min-w-0 ${
+              printMode ? "align-top" : ""
+            }`}
+          >
             <EditableCell
               value={row.name}
               onChange={(v) => updateRow(row.id, 'name', v)}
               className={textSize}
+              staticDisplay={printMode}
+              multiline={!printMode}
             />
           </td>
-          <td className={`border border-gray-300 ${cellPad} text-center`}>
+          <td className={`border border-gray-300 ${cellPad} min-w-0 text-center`}>
             <EditableCell
               value={row.unit}
               onChange={(v) => updateRow(row.id, 'unit', v)}
               className={`${textSize} text-center`}
+              staticDisplay={printMode}
             />
           </td>
-          <td className={`border border-gray-300 ${cellPad} text-center`}>
+          <td className={`border border-gray-300 ${cellPad} min-w-0 text-center`}>
             <EditableCell
               value={String(qty)}
               onChange={(v) => updateRow(row.id, 'quantity', v)}
               isNumber
               className={`${textSize} text-center`}
+              staticDisplay={printMode}
             />
           </td>
           {!printMode && (
@@ -874,12 +928,13 @@ export function ConstructionSmetaCalculator() {
               </td>
             </>
           )}
-          <td className={`border border-gray-300 ${cellPad} text-center`}>
+          <td className={`border border-gray-300 ${cellPad} min-w-0 text-center`}>
             <EditableCell
               value={String(upperPrice)}
               onChange={(v) => updateRow(row.id, 'upperPrice', v)}
               isNumber
               className={`${textSize} text-right`}
+              staticDisplay={printMode}
             />
           </td>
           <td className={`border border-gray-300 ${cellPad} text-right font-bold text-blue-800`}>
@@ -947,9 +1002,15 @@ export function ConstructionSmetaCalculator() {
     }
 
     return (
-      <div className="max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
+      <div
+        className={
+          printMode
+            ? "w-full min-w-0"
+            : "max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]"
+        }
+      >
         <table
-          className={`w-full border-collapse print-table ${textSize} ${printMode ? '' : 'min-w-[780px]'}`}
+          className={`w-full border-collapse print-table ${textSize} ${printMode ? "table-fixed smeta-print-capture" : "min-w-[780px]"}`}
           onDragStartCapture={(e) => {
             if (printMode) return
             const target = e.target as HTMLElement | null
@@ -967,7 +1028,11 @@ export function ConstructionSmetaCalculator() {
               {!printMode && (
                 <th className={`border border-blue-700 ${cellPad} w-[5.5rem] text-center`}>Этап</th>
               )}
-              <th className={`border border-blue-700 ${cellPad} min-w-[120px] sm:min-w-[200px]`}>
+              <th
+                className={`border border-blue-700 ${cellPad} min-w-0 ${
+                  printMode ? "w-[40%] align-top" : "min-w-[120px] sm:min-w-[200px]"
+                }`}
+              >
                 Наименование работ
               </th>
               <th className={`border border-blue-700 ${cellPad} w-16 text-center`}>Ед. изм.</th>
@@ -1060,7 +1125,7 @@ export function ConstructionSmetaCalculator() {
 
   if (isPreview) {
     return (
-      <div className="smeta-calculator-root min-h-screen w-full min-w-0 max-w-full bg-slate-100 text-zinc-900 [color-scheme:light]">
+      <div className="smeta-calculator smeta-calculator-root min-h-screen w-full min-w-0 max-w-full bg-slate-100 text-zinc-900 [color-scheme:light]">
         {iosPrintHelpOpen && (
           <div
             className="no-print fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60"
