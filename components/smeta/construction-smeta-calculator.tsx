@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { toJpeg } from 'html-to-image'
 import { saveAs } from 'file-saver'
@@ -137,10 +137,25 @@ function EditableCell({
 }) {
   const [draft, setDraft] = useState(value);
   const skipBlurCommitRef = useRef(false);
+  const multilineRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setDraft(value);
   }, [value]);
+
+  const minMultilineHeightPx = 28;
+
+  const adjustMultilineHeight = useCallback(() => {
+    const el = multilineRef.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = `${Math.max(minMultilineHeightPx, el.scrollHeight)}px`
+  }, [])
+
+  useLayoutEffect(() => {
+    if (staticDisplay || !multiline || isNumber) return
+    adjustMultilineHeight()
+  }, [draft, value, staticDisplay, multiline, isNumber, adjustMultilineHeight])
 
   const commit = () => {
     if (isNumber) {
@@ -166,12 +181,15 @@ function EditableCell({
   if (multiline && !isNumber) {
     return (
       <textarea
+        ref={multilineRef}
         autoComplete="off"
         draggable={false}
-        rows={3}
-        className={`w-full min-h-[3.25rem] max-w-full resize-y border border-transparent bg-transparent px-2 py-1 text-zinc-900 rounded outline-none transition-colors hover:bg-blue-50/70 focus:border-blue-400 focus:bg-white focus:ring-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${className ?? ''}`}
+        rows={1}
+        className={`box-border w-full min-h-[28px] max-w-full resize-none overflow-hidden border border-transparent bg-transparent px-2 py-1 text-zinc-900 leading-normal rounded outline-none transition-colors hover:bg-blue-50/70 focus:border-blue-400 focus:bg-white focus:ring-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${className ?? ''}`}
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => {
+          setDraft(e.target.value)
+        }}
         onDragStart={(e) => e.preventDefault()}
         onBlur={() => {
           if (skipBlurCommitRef.current) {
