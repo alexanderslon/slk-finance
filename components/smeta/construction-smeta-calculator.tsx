@@ -17,6 +17,7 @@ import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-type
 import {
   ADDITIONAL_WORK_STAGE,
   MATERIALS_STAGE,
+  SMETA_EMPTY_ROWS,
   SMETA_INITIAL_ROWS,
   SMETA_MAIN_STAGES,
   SMETA_STAGE_ORDER,
@@ -435,6 +436,20 @@ export function ConstructionSmetaCalculator() {
     setHeader(defaultHeader())
     setRows(SMETA_INITIAL_ROWS.map((r) => ({ ...r })))
     nextIdRef.current = nextRowIdFromRows(SMETA_INITIAL_ROWS)
+    setPrepayment('5000')
+    setLaborer('0')
+    setOtkat('5000')
+    setOverheadPercent('0')
+    setEnabledStages([...SMETA_MAIN_STAGES])
+    setApiError('')
+  }, [])
+
+  const handleNewEmpty = useCallback(() => {
+    setEstimateId(null)
+    setListSelect('')
+    setHeader(defaultHeader())
+    setRows(SMETA_EMPTY_ROWS.map((r) => ({ ...r })))
+    nextIdRef.current = nextRowIdFromRows(SMETA_EMPTY_ROWS)
     setPrepayment('5000')
     setLaborer('0')
     setOtkat('5000')
@@ -1330,6 +1345,15 @@ export function ConstructionSmetaCalculator() {
                 </Button>
                 <Button type="button" variant="outline" className="w-full shrink-0 sm:w-auto" onClick={handleNew}>
                   Новая смета
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full shrink-0 sm:w-auto"
+                  onClick={handleNewEmpty}
+                  title="Очистить форму: одна пустая позиция, без демо-таблицы"
+                >
+                  Пустой документ
                 </Button>
               </div>
             </div>

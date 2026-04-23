@@ -81,6 +81,11 @@ export const SMETA_INITIAL_ROWS: RowData[] = [
   row(21, 4, { name: 'Вывоз строительного мусора (новое)', unit: '—', quantity: 1, workerPrice: 6000, upperPrice: 22000, column1: '' }),
 ]
 
+/** Одна пустая позиция — «чистая» смета (без демо-наполнения). */
+export const SMETA_EMPTY_ROWS: RowData[] = [
+  row(1, 1, { name: '', unit: 'шт.', quantity: 1, workerPrice: 0, upperPrice: 0, column1: '' }),
+]
+
 export function defaultHeader(): HeaderData {
   return {
     city: 'Москва',
