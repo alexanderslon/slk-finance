@@ -151,9 +151,14 @@ function EditableCell({
       type="text"
       inputMode={isNumber ? 'decimal' : undefined}
       autoComplete="off"
+      draggable={false}
       className={`w-full min-h-[28px] border border-transparent bg-transparent px-2 py-1 text-zinc-900 rounded outline-none transition-colors hover:bg-blue-50/70 focus:border-blue-400 focus:bg-white focus:ring-0 ${className ?? ''}`}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
+      onDragStart={(e) => {
+        // Текст в инпутах не должен запускать dnd строки при выделении.
+        e.preventDefault()
+      }}
       onBlur={() => {
         if (skipBlurCommitRef.current) {
           skipBlurCommitRef.current = false;
@@ -517,7 +522,7 @@ export function ConstructionSmetaCalculator() {
         {
           id,
           stage,
-          name: 'Новая позиция',
+          name: '',
           unit: 'шт.',
           quantity: 1,
           workerPrice: 0,
@@ -772,16 +777,9 @@ export function ConstructionSmetaCalculator() {
       tbodyNodes.push(
         <tr
           key={row.id}
-          draggable={!printMode}
-          onDragStart={() => {
-            if (printMode) return
-            draggingRowIdRef.current = row.id
-          }}
-          onDragEnd={() => {
-            draggingRowIdRef.current = null
-          }}
           onDragOver={(e) => {
             if (printMode) return
+            if (draggingRowIdRef.current == null) return
             e.preventDefault()
           }}
           onDrop={() => {
@@ -794,7 +792,29 @@ export function ConstructionSmetaCalculator() {
           className={`${stripe} transition hover:bg-blue-50`}
         >
           <td className={`border border-zinc-300 ${cellPad} text-center font-medium text-zinc-700`}>
-            {idx + 1}
+            <div className="flex items-center justify-center gap-1.5">
+              {!printMode ? (
+                <button
+                  data-dnd-handle="1"
+                  className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition"
+                  title="Перетащите строку"
+                  type="button"
+                  draggable
+                  onDragStart={() => {
+                    draggingRowIdRef.current = row.id
+                  }}
+                  onDragEnd={() => {
+                    draggingRowIdRef.current = null
+                  }}
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M7 4a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 10a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 16a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0z" />
+                  </svg>
+                </button>
+              ) : null}
+              <span className="tabular-nums">{idx + 1}</span>
+            </div>
           </td>
           {!printMode && (
             <td className={`border border-gray-300 ${cellPad} p-0.5`}>
@@ -869,19 +889,6 @@ export function ConstructionSmetaCalculator() {
             <td className={`border border-gray-300 ${cellPad} text-center no-print`}>
               <div className="flex items-center justify-center gap-1">
                 <button
-                  className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition"
-                  title="Перетащите строку"
-                  onMouseDown={() => {
-                    draggingRowIdRef.current = row.id
-                  }}
-                  onClick={(e) => e.preventDefault()}
-                  type="button"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="M7 4a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 10a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM7 16a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0z" />
-                  </svg>
-                </button>
-                <button
                   onClick={() => deleteRow(row.id)}
                   className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition"
                   title="Удалить"
@@ -943,6 +950,16 @@ export function ConstructionSmetaCalculator() {
       <div className="max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch]">
         <table
           className={`w-full border-collapse print-table ${textSize} ${printMode ? '' : 'min-w-[780px]'}`}
+          onDragStartCapture={(e) => {
+            if (printMode) return
+            const target = e.target as HTMLElement | null
+            const isHandle = !!target?.closest?.('[data-dnd-handle="1"]')
+            if (!isHandle) {
+              // Запрещаем DnD из ячеек/инпутов: перенос только за хвостик слева.
+              e.preventDefault()
+              e.stopPropagation()
+            }
+          }}
         >
           <thead>
             <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
