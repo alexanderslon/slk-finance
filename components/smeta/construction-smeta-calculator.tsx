@@ -21,6 +21,7 @@ import {
   SMETA_INITIAL_ROWS,
   SMETA_MAIN_STAGES,
   SMETA_STAGE_ORDER,
+  blankHeader,
   defaultHeader,
   firstEnabledStage,
   nextRowIdFromRows,
@@ -433,13 +434,13 @@ export function ConstructionSmetaCalculator() {
   const handleNew = useCallback(() => {
     setEstimateId(null)
     setListSelect('')
-    setHeader(defaultHeader())
-    setRows(SMETA_INITIAL_ROWS.map((r) => ({ ...r })))
-    nextIdRef.current = nextRowIdFromRows(SMETA_INITIAL_ROWS)
-    setPrepayment('5000')
-    setLaborer('0')
-    setOtkat('5000')
-    setOverheadPercent('0')
+    setHeader(blankHeader())
+    setRows(SMETA_EMPTY_ROWS.map((r) => ({ ...r })))
+    nextIdRef.current = nextRowIdFromRows(SMETA_EMPTY_ROWS)
+    setPrepayment('')
+    setLaborer('')
+    setOtkat('')
+    setOverheadPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
     setApiError('')
   }, [])
@@ -447,13 +448,13 @@ export function ConstructionSmetaCalculator() {
   const handleNewEmpty = useCallback(() => {
     setEstimateId(null)
     setListSelect('')
-    setHeader(defaultHeader())
+    setHeader(blankHeader())
     setRows(SMETA_EMPTY_ROWS.map((r) => ({ ...r })))
     nextIdRef.current = nextRowIdFromRows(SMETA_EMPTY_ROWS)
-    setPrepayment('5000')
-    setLaborer('0')
-    setOtkat('5000')
-    setOverheadPercent('0')
+    setPrepayment('')
+    setLaborer('')
+    setOtkat('')
+    setOverheadPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
     setApiError('')
   }, [])
@@ -613,8 +614,11 @@ export function ConstructionSmetaCalculator() {
   }
 
   const deleteRow = (id: number) => {
-    setRows((prev) => prev.filter((r) => r.id !== id));
-  };
+    const row = rows.find((r) => r.id === id)
+    const label = row?.name?.trim() ? `«${row.name.trim()}»` : `#${id}`
+    if (!window.confirm(`Удалить позицию ${label} из сметы?`)) return
+    setRows((prev) => prev.filter((r) => r.id !== id))
+  }
 
   const reorderRows = useCallback((fromId: number, toId: number) => {
     if (fromId === toId) return;

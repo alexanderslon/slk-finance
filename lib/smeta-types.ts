@@ -98,6 +98,19 @@ export function defaultHeader(): HeaderData {
   }
 }
 
+/** Полностью пустые реквизиты для «голой» сметы. */
+export function blankHeader(): HeaderData {
+  return {
+    city: '',
+    address: '',
+    customerName: '',
+    customerPhone: '',
+    squareMeters: '',
+    documentNumber: '',
+    date: '',
+  }
+}
+
 export function nextRowIdFromRows(rows: RowData[]): number {
   const max = rows.reduce((m, r) => Math.max(m, r.id), 0)
   return Math.max(100, max) + 1
