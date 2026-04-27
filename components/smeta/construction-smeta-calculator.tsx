@@ -7,6 +7,16 @@ import { saveAs } from 'file-saver'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -296,6 +306,9 @@ export function ConstructionSmetaCalculator() {
   const [listSelect, setListSelect] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteSavedOpen, setDeleteSavedOpen] = useState(false)
+  const [pendingDeleteSavedId, setPendingDeleteSavedId] = useState<number | null>(null)
+  const [pendingDeleteSavedLabel, setPendingDeleteSavedLabel] = useState<string>('')
   const [loadingList, setLoadingList] = useState(true)
   const [apiError, setApiError] = useState('')
 
@@ -518,7 +531,7 @@ export function ConstructionSmetaCalculator() {
     }
   }, [applyDocState, listSelect])
 
-  const handleDeleteSaved = useCallback(async () => {
+  const requestDeleteSaved = useCallback(() => {
     const id = Number(listSelect)
     if (!Number.isFinite(id) || id <= 0) return
     const item = estimateList.find((e) => e.id === id)
@@ -528,7 +541,14 @@ export function ConstructionSmetaCalculator() {
         : item?.title?.trim()
           ? `${item.title} · ${fmtMoneyOrDash(item?.total_amount)}`
           : `id ${id}`
-    if (!window.confirm(`Удалить смету «${label}» из базы? Восстановить будет нельзя.`)) return
+    setPendingDeleteSavedId(id)
+    setPendingDeleteSavedLabel(label)
+    setDeleteSavedOpen(true)
+  }, [estimateList, listSelect])
+
+  const confirmDeleteSaved = useCallback(async () => {
+    const id = pendingDeleteSavedId
+    if (!Number.isFinite(id as number) || id == null || id <= 0) return
     setApiError('')
     setDeleting(true)
     try {
@@ -538,6 +558,7 @@ export function ConstructionSmetaCalculator() {
         setApiError(typeof raw.error === 'string' ? raw.error : 'Не удалось удалить смету')
         return
       }
+      setDeleteSavedOpen(false)
       await refreshList()
       if (estimateId === id) {
         handleNew()
@@ -549,7 +570,7 @@ export function ConstructionSmetaCalculator() {
     } finally {
       setDeleting(false)
     }
-  }, [estimateId, estimateList, handleNew, listSelect, refreshList])
+  }, [estimateId, handleNew, pendingDeleteSavedId, refreshList])
 
   useEffect(() => {
     if (!isPreview) return;
@@ -1294,6 +1315,42 @@ export function ConstructionSmetaCalculator() {
 
   return (
     <div className="smeta-calculator smeta-calculator-root w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-100 to-blue-50 text-zinc-900 [color-scheme:light]">
+      <AlertDialog
+        open={deleteSavedOpen}
+        onOpenChange={(open) => {
+          setDeleteSavedOpen(open)
+          if (!open) {
+            setPendingDeleteSavedId(null)
+            setPendingDeleteSavedLabel('')
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить смету?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteSavedLabel ? (
+                <>
+                  Смета: <span className="font-semibold text-foreground">{pendingDeleteSavedLabel}</span>
+                  <br />
+                </>
+              ) : null}
+              Действие необратимо — восстановить будет нельзя.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void confirmDeleteSaved()}
+              disabled={deleting}
+            >
+              {deleting ? 'Удаление…' : 'Да, удалить'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div data-print-root className="print-only">
         {renderPrintDocument()}
       </div>
@@ -1343,7 +1400,7 @@ export function ConstructionSmetaCalculator() {
                     type="button"
                     variant="outline"
                     className="w-full shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto"
-                    onClick={() => void handleDeleteSaved()}
+                    onClick={requestDeleteSaved}
                     disabled={!listSelect || deleting}
                     title="Удалить выбранную смету из базы"
                   >
