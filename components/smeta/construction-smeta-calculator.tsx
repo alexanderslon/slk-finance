@@ -127,6 +127,7 @@ function EditableCell({
   className,
   staticDisplay,
   multiline,
+  emptyWhenZero,
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -136,12 +137,18 @@ function EditableCell({
   staticDisplay?: boolean;
   /** Редактирование: длинные наименования — `textarea` с переносами. */
   multiline?: boolean;
+  /** Для числовых полей: показывать пусто, если значение 0 (удобнее для новой строки). */
+  emptyWhenZero?: boolean;
 }) {
   const [draft, setDraft] = useState(value);
   const skipBlurCommitRef = useRef(false);
   const multilineRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    if (isNumber && emptyWhenZero && toNumber(value) === 0) {
+      setDraft('');
+      return;
+    }
     setDraft(value);
   }, [value]);
 
@@ -161,6 +168,11 @@ function EditableCell({
 
   const commit = () => {
     if (isNumber) {
+      if (String(draft).trim() === '') {
+        onChange('0');
+        if (emptyWhenZero) setDraft('');
+        return;
+      }
       const parsed = toNumber(draft);
       onChange(String(parsed));
       setDraft(String(parsed));
@@ -955,6 +967,7 @@ export function ConstructionSmetaCalculator() {
                   value={String(workerPrice)}
                   onChange={(v) => updateRow(row.id, 'workerPrice', v)}
                   isNumber
+                  emptyWhenZero
                   className={`${textSize} text-right`}
                 />
               </td>
@@ -970,6 +983,7 @@ export function ConstructionSmetaCalculator() {
               value={String(upperPrice)}
               onChange={(v) => updateRow(row.id, 'upperPrice', v)}
               isNumber
+              emptyWhenZero
               className={`${textSize} text-right`}
               staticDisplay={printMode}
             />
