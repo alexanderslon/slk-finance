@@ -364,7 +364,8 @@ export function ConstructionSmetaCalculator() {
   const totals = useMemo(() => {
     const worksSubtotal = visibleRows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.upperPrice), 0)
     const overheadPct = Math.max(0, toNumber(overheadPercent))
-    const overheadAmount = worksSubtotal * (overheadPct / 100)
+    const overheadSpecified = overheadPercent.trim() !== '' && overheadPct > 0
+    const overheadAmount = overheadSpecified ? worksSubtotal * (overheadPct / 100) : 0
     const totalUpperSum = worksSubtotal + overheadAmount
     const totalWorkerSum = visibleRows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.workerPrice), 0)
     const prepaymentN = toNumber(prepayment)
@@ -377,6 +378,7 @@ export function ConstructionSmetaCalculator() {
       worksSubtotal,
       overheadAmount,
       overheadPercent: overheadPct,
+      overheadSpecified,
       totalUpperSum,
       totalWorkerSum,
       prepaymentN,
@@ -697,7 +699,7 @@ export function ConstructionSmetaCalculator() {
             <span>Итого по позициям:</span>
             <span className="font-semibold tabular-nums">{fmt(totals.worksSubtotal)} ₽</span>
           </div>
-          {totals.overheadAmount > 0 ? (
+          {totals.overheadSpecified ? (
             <div className="flex justify-between text-gray-600">
               <span>Накладные ({fmt(totals.overheadPercent)}% от позиций):</span>
               <span className="font-semibold tabular-nums">{fmt(totals.overheadAmount)} ₽</span>
@@ -1147,7 +1149,7 @@ export function ConstructionSmetaCalculator() {
               )}
               {!printMode && <td className={`border border-gray-300 ${cellPad} no-print`} />}
             </tr>
-            {totals.overheadAmount > 0 && (
+            {totals.overheadSpecified && (
               <tr className="bg-blue-50/80 font-semibold">
                 <td colSpan={printMode ? 4 : 8} className={`border border-gray-300 ${cellPad} text-right text-zinc-700`}>
                   Накладные ({fmt(totals.overheadPercent)}%):
