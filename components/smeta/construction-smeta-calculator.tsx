@@ -130,6 +130,29 @@ function fmtMoneyOrDash(value: unknown): string {
   return `${fmt(n)} ₽`
 }
 
+function todayIsoLocal(): string {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function nextDocumentNumberFromList(
+  items: Array<{ document_number?: string | null }>,
+): string {
+  let max = 0
+  for (const item of items) {
+    const raw = item.document_number?.trim()
+    if (!raw) continue
+    const match = raw.match(/(\d+)(?!.*\d)/)
+    if (!match) continue
+    const n = parseInt(match[1], 10)
+    if (Number.isFinite(n)) max = Math.max(max, n)
+  }
+  return `СМ-${String(max + 1).padStart(3, '0')}`
+}
+
 function EditableCell({
   value,
   onChange,
@@ -354,6 +377,16 @@ export function ConstructionSmetaCalculator() {
     void refreshList()
   }, [isPreview, refreshList])
 
+  const buildNewHeader = useCallback((): HeaderData => {
+    const blank = blankHeader()
+    return {
+      ...blank,
+      city: 'Сочи',
+      date: todayIsoLocal(),
+      documentNumber: nextDocumentNumberFromList(estimateList),
+    }
+  }, [estimateList])
+
   const visibleRows = useMemo(() => {
     const set = new Set(enabledStages)
     return rows.filter((r) => set.has(normalizeSmetaStage(r.stage)))
@@ -461,7 +494,7 @@ export function ConstructionSmetaCalculator() {
   const handleNew = useCallback(() => {
     setEstimateId(null)
     setListSelect('')
-    setHeader(blankHeader())
+    setHeader(buildNewHeader())
     setRows(SMETA_EMPTY_ROWS.map((r) => ({ ...r })))
     nextIdRef.current = nextRowIdFromRows(SMETA_EMPTY_ROWS)
     setPrepayment('')
@@ -470,12 +503,12 @@ export function ConstructionSmetaCalculator() {
     setOverheadPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
     setApiError('')
-  }, [])
+  }, [buildNewHeader])
 
   const handleNewEmpty = useCallback(() => {
     setEstimateId(null)
     setListSelect('')
-    setHeader(blankHeader())
+    setHeader(buildNewHeader())
     setRows(SMETA_EMPTY_ROWS.map((r) => ({ ...r })))
     nextIdRef.current = nextRowIdFromRows(SMETA_EMPTY_ROWS)
     setPrepayment('')
@@ -484,7 +517,7 @@ export function ConstructionSmetaCalculator() {
     setOverheadPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
     setApiError('')
-  }, [])
+  }, [buildNewHeader])
 
   const toggleStageEnabled = useCallback((st: SmetaStage, checked: boolean) => {
     setEnabledStages((prev) => {
