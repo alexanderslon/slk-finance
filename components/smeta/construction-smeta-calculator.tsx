@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { DocState, HeaderData, RowData, SmetaStage } from '@/lib/smeta-types'
+import type { DocState, HeaderData, RowData, SmetaMainStageKey, SmetaStage } from '@/lib/smeta-types'
 import {
   ADDITIONAL_WORK_STAGE,
   MATERIALS_STAGE,
@@ -36,6 +36,7 @@ import {
   firstEnabledStage,
   nextRowIdFromRows,
   normalizeEnabledStages,
+  normalizeStageDeadlines,
   normalizeSmetaStage,
   stageLabel,
   stageSubtotalLabel,
@@ -136,6 +137,10 @@ function todayIsoLocal(): string {
   const mm = String(now.getMonth() + 1).padStart(2, '0')
   const dd = String(now.getDate()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd}`
+}
+
+function isSmetaMainStage(st: SmetaStage): st is SmetaMainStageKey {
+  return st === 1 || st === 2 || st === 3 || st === 4
 }
 
 function nextDocumentNumberFromList(
@@ -317,6 +322,7 @@ export function ConstructionSmetaCalculator() {
   const [otkat, setOtkat] = useState<string>('5000')
   const [overheadPercent, setOverheadPercent] = useState<string>('0')
   const [enabledStages, setEnabledStages] = useState<SmetaStage[]>(() => [...SMETA_MAIN_STAGES])
+  const [stageDeadlines, setStageDeadlines] = useState(() => normalizeStageDeadlines(undefined))
   const nextIdRef = useRef(nextRowIdFromRows(SMETA_INITIAL_ROWS))
   const draggingRowIdRef = useRef<number | null>(null)
   const printContentRef = useRef<HTMLDivElement | null>(null)
@@ -352,6 +358,7 @@ export function ConstructionSmetaCalculator() {
     if (typeof doc.overheadPercent === 'string') setOverheadPercent(doc.overheadPercent)
     else setOverheadPercent('0')
     setEnabledStages(normalizeEnabledStages(doc.enabledStages))
+    setStageDeadlines(normalizeStageDeadlines(doc.stageDeadlines))
   }, [])
 
   const refreshList = useCallback(async () => {
@@ -454,6 +461,7 @@ export function ConstructionSmetaCalculator() {
         overheadPercent,
         enabledStages,
         totals,
+        stageDeadlines,
       )
       if (estimateId) {
         const res = await fetch(`/api/smeta/${estimateId}`, {
@@ -489,7 +497,19 @@ export function ConstructionSmetaCalculator() {
     } finally {
       setSaving(false)
     }
-  }, [estimateId, enabledStages, header, laborer, otkat, overheadPercent, prepayment, refreshList, rows, totals])
+  }, [
+    estimateId,
+    enabledStages,
+    header,
+    laborer,
+    otkat,
+    overheadPercent,
+    prepayment,
+    refreshList,
+    rows,
+    stageDeadlines,
+    totals,
+  ])
 
   const handleNew = useCallback(() => {
     setEstimateId(null)
@@ -502,6 +522,7 @@ export function ConstructionSmetaCalculator() {
     setOtkat('')
     setOverheadPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
+    setStageDeadlines({})
     setApiError('')
   }, [buildNewHeader])
 
@@ -516,6 +537,7 @@ export function ConstructionSmetaCalculator() {
     setOtkat('')
     setOverheadPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
+    setStageDeadlines({})
     setApiError('')
   }, [buildNewHeader])
 
@@ -620,7 +642,8 @@ export function ConstructionSmetaCalculator() {
       if (typeof parsed?.laborer === "string") setLaborer(parsed.laborer);
       if (typeof parsed?.otkat === "string") setOtkat(parsed.otkat);
       if (typeof parsed?.overheadPercent === "string") setOverheadPercent(parsed.overheadPercent);
-      setEnabledStages(normalizeEnabledStages(parsed?.enabledStages));
+      setEnabledStages(normalizeEnabledStages(parsed?.enabledStages))
+      setStageDeadlines(normalizeStageDeadlines(parsed?.stageDeadlines))
     } catch {
       // ignore malformed storage
     }
@@ -768,6 +791,7 @@ export function ConstructionSmetaCalculator() {
       otkat,
       overheadPercent,
       enabledStages,
+      stageDeadlines,
     }
     try {
       localStorage.setItem(key, JSON.stringify(state))
@@ -814,6 +838,7 @@ export function ConstructionSmetaCalculator() {
     rows,
     router,
     searchParams,
+    stageDeadlines,
   ])
 
   /** Вернуться из предпросмотра: `window.close()` не работает после обычного `router.push` в той же вкладке. */
@@ -917,9 +942,44 @@ export function ConstructionSmetaCalculator() {
           <tr key={`stage-${row.id}-head`} className="bg-zinc-200/90 text-zinc-900">
             <td
               colSpan={printMode ? 6 : 10}
-              className={`border border-zinc-400 ${cellPad} font-bold ${textSize}`}
+              className={`border border-zinc-400 ${cellPad} ${textSize}`}
             >
-              {stageLabel(st)}
+              <div className="space-y-1.5 py-0.5">
+                <div className="font-bold">{stageLabel(st)}</div>
+                {isSmetaMainStage(st) ? (
+                  printMode ? (
+                    stageDeadlines[st]?.trim() ? (
+                      <div className="text-[11px] font-semibold leading-snug text-zinc-800 sm:text-[12px]">
+                        <span className="font-bold text-zinc-600">Срок выполнения работ:</span>{' '}
+                        <span className="whitespace-pre-wrap break-words font-medium [overflow-wrap:anywhere]">
+                          {stageDeadlines[st]}
+                        </span>
+                      </div>
+                    ) : null
+                  ) : (
+                    <label className="flex max-w-full flex-col gap-1 font-normal sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+                      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                        Срок выполнения работ
+                      </span>
+                      <input
+                        type="text"
+                        className="min-h-[28px] min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 sm:text-sm"
+                        placeholder="напр. 5 раб. дней или 01.06–15.06.2026"
+                        value={stageDeadlines[st] ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setStageDeadlines((prev) => {
+                            const next = { ...prev }
+                            if (!v.trim()) delete next[st]
+                            else next[st] = v
+                            return next
+                          })
+                        }}
+                      />
+                    </label>
+                  )
+                ) : null}
+              </div>
             </td>
           </tr>,
         )

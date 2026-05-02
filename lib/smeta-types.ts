@@ -4,7 +4,13 @@
 export type SmetaStage = 1 | 2 | 3 | 4 | 5 | 6
 
 /** Основные этапы (чекбоксы 1–4). */
-export const SMETA_MAIN_STAGES: readonly SmetaStage[] = [1, 2, 3, 4]
+export const SMETA_MAIN_STAGES = [1, 2, 3, 4] as const satisfies readonly SmetaStage[]
+
+/** Ключ только для основных этапов (сроки не задаются для 5 и 6). */
+export type SmetaMainStageKey = (typeof SMETA_MAIN_STAGES)[number]
+
+/** Срок выполнения работ по этапам 1–4 — свободный текст (даты, календарные дни и т.д.). */
+export type SmetaStageDeadlines = Partial<Record<SmetaMainStageKey, string>>
 
 /** Этап «доп. работы». */
 export const ADDITIONAL_WORK_STAGE = 5 as const satisfies SmetaStage
@@ -47,6 +53,8 @@ export interface DocState {
   overheadPercent: string
   /** Какие этапы участвуют в смете и расчёте (минимум один). Остальные скрыты. В старых сохранениях может отсутствовать — тогда считаются основные этапы 1–4. */
   enabledStages?: SmetaStage[]
+  /** Сроки выполнения только для этапов 1–4. */
+  stageDeadlines?: SmetaStageDeadlines
 }
 
 function row(
@@ -127,6 +135,17 @@ export function normalizeSmetaStage(v: unknown): SmetaStage {
 }
 
 /** Нормализация списка активных этапов: непустой подмножество {1..6}, порядок фиксированный. */
+export function normalizeStageDeadlines(raw: unknown): SmetaStageDeadlines {
+  if (!raw || typeof raw !== 'object') return {}
+  const o = raw as Record<string, unknown>
+  const out: SmetaStageDeadlines = {}
+  for (const st of SMETA_MAIN_STAGES) {
+    const v = o[String(st)]
+    if (typeof v === 'string') out[st] = v
+  }
+  return out
+}
+
 export function normalizeEnabledStages(raw: unknown): SmetaStage[] {
   if (!raw || !Array.isArray(raw)) return [...SMETA_MAIN_STAGES]
   const picked = new Set<SmetaStage>()
