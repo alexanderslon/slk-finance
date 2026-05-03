@@ -872,19 +872,23 @@ export function ConstructionSmetaCalculator() {
   }, [pathname, router, searchParams])
 
   const runSystemPrint = useCallback(() => {
+    // Включаем «островок печати»: globals.css по html.smeta-printing скрывает всё, кроме [data-print-root].
+    const html = document.documentElement
+    html.classList.add('smeta-printing')
+    let restored = false
     const restore = () => {
-      document.querySelectorAll<HTMLElement>(".no-print").forEach((node) => {
-        node.style.removeProperty("display");
-      });
-    };
-    document.querySelectorAll<HTMLElement>(".no-print").forEach((node) => {
-      node.style.setProperty("display", "none", "important");
-    });
+      if (restored) return
+      restored = true
+      html.classList.remove('smeta-printing')
+      window.removeEventListener('afterprint', restore)
+    }
+    window.addEventListener('afterprint', restore, { once: true })
     window.setTimeout(() => {
-      window.print();
-      window.setTimeout(restore, 500);
-    }, 100);
-  }, []);
+      window.print()
+      // Подстраховка: некоторые браузеры (особенно мобильные) не шлют afterprint надёжно.
+      window.setTimeout(restore, 1500)
+    }, 50)
+  }, [])
 
   const handlePreviewPrint = useCallback(() => {
     if (isIOS()) {
@@ -1428,7 +1432,11 @@ export function ConstructionSmetaCalculator() {
         )}
 
         <div className="max-w-[1200px] mx-auto p-4">
-          <div ref={printContentRef} className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+          <div
+            ref={printContentRef}
+            data-print-root
+            className="bg-white rounded-2xl shadow-md border border-gray-100 p-4"
+          >
             {renderPrintDocument()}
           </div>
         </div>

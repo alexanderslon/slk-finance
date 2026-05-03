@@ -188,6 +188,43 @@
     size: A4 portrait;
     margin: 12mm;
   }
+
+  /*
+   * Режим «только документ» — включается через class="smeta-printing" на <html>
+   * перед window.print(). Прячем ВСЁ на странице (включая admin sidebar / mobile nav,
+   * редактируемую таблицу, кнопки, карточки итогов), оставляя только блок документа.
+   * Используем visibility: к ней применяется правило «потомок переопределяет родителя»,
+   * а сам блок остаётся в потоке — корректно постранично разбивается на много страниц.
+   */
+  html.smeta-printing,
+  html.smeta-printing body {
+    background: #ffffff !important;
+    color: #18181b !important;
+  }
+
+  html.smeta-printing body * {
+    visibility: hidden !important;
+    box-shadow: none !important;
+  }
+
+  html.smeta-printing body [data-print-root],
+  html.smeta-printing body [data-print-root] * {
+    visibility: visible !important;
+  }
+
+  html.smeta-printing body [data-print-root] {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    background: #ffffff !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
 }
 
 .smeta-calculator .print-only {
