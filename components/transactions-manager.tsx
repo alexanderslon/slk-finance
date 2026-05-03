@@ -31,7 +31,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Search,
+  X,
+  Download,
+} from 'lucide-react'
 import {
   transactionMonthKey,
   transactionMonthTitleRu,
@@ -40,6 +49,15 @@ import {
 } from '@/lib/transaction-dates'
 import type { Transaction, Wallet, Category, Partner, Worker } from '@/lib/db'
 import { cn } from '@/lib/utils'
+import { downloadCsv, todayStampForFilename, toCsv } from '@/lib/csv'
+
+const COUNTERPARTY_NONE = '__none__'
+
+function counterpartyKey(t: Transaction): string {
+  if (t.partner_id) return `p:${t.partner_id}`
+  if (t.worker_id) return `w:${t.worker_id}`
+  return COUNTERPARTY_NONE
+}
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -77,6 +95,10 @@ export function TransactionsManager({
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null)
   const [loading, setLoading] = useState(false)
   const [monthFilter, setMonthFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [walletFilter, setWalletFilter] = useState<string>('all')
+  const [counterpartyFilter, setCounterpartyFilter] = useState<string>('all')
+  const [search, setSearch] = useState<string>('')
   const { confirm, dialog } = useConfirmDialog()
 
   useEffect(() => {
@@ -92,9 +114,77 @@ export function TransactionsManager({
   )
 
   const filteredTransactions = useMemo(() => {
-    if (monthFilter === 'all') return transactions
-    return transactions.filter((t) => transactionMonthKey(t.created_at) === monthFilter)
-  }, [transactions, monthFilter])
+    const needle = search.trim().toLowerCase()
+    return transactions.filter((t) => {
+      if (monthFilter !== 'all' && transactionMonthKey(t.created_at) !== monthFilter) return false
+      if (categoryFilter !== 'all' && String(t.category_id ?? '') !== categoryFilter) return false
+      if (walletFilter !== 'all' && String(t.wallet_id ?? '') !== walletFilter) return false
+      if (counterpartyFilter !== 'all' && counterpartyKey(t) !== counterpartyFilter) return false
+      if (needle) {
+        const haystack = [
+          t.category_name,
+          t.wallet_name,
+          t.partner_name,
+          t.worker_name,
+          t.description,
+          String(t.amount ?? ''),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        if (!haystack.includes(needle)) return false
+      }
+      return true
+    })
+  }, [transactions, monthFilter, categoryFilter, walletFilter, counterpartyFilter, search])
+
+  const filtersActive =
+    monthFilter !== 'all' ||
+    categoryFilter !== 'all' ||
+    walletFilter !== 'all' ||
+    counterpartyFilter !== 'all' ||
+    search.trim().length > 0
+
+  function resetFilters() {
+    setMonthFilter('all')
+    setCategoryFilter('all')
+    setWalletFilter('all')
+    setCounterpartyFilter('all')
+    setSearch('')
+  }
+
+  // Активные категории/контрагенты — только те, что встречаются в данных
+  // того же типа (доход/расход), чтобы не засорять селект пустыми пунктами.
+  const activeCategoryIds = useMemo(
+    () => new Set(initialTransactions.map((t) => t.category_id).filter(Boolean) as number[]),
+    [initialTransactions],
+  )
+  const activeWalletIds = useMemo(
+    () => new Set(initialTransactions.map((t) => t.wallet_id).filter(Boolean) as number[]),
+    [initialTransactions],
+  )
+  const counterpartyOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    let hasNone = false
+    for (const t of initialTransactions) {
+      const k = counterpartyKey(t)
+      if (k === COUNTERPARTY_NONE) {
+        hasNone = true
+        continue
+      }
+      if (!seen.has(k)) {
+        const label = t.partner_id
+          ? (t.partner_name ?? `Партнёр #${t.partner_id}`)
+          : (t.worker_name ?? `Работник #${t.worker_id}`)
+        seen.set(k, label)
+      }
+    }
+    const out = Array.from(seen.entries())
+      .sort((a, b) => a[1].localeCompare(b[1], 'ru'))
+      .map(([value, label]) => ({ value, label }))
+    if (hasNone) out.push({ value: COUNTERPARTY_NONE, label: 'Без получателя' })
+    return out
+  }, [initialTransactions])
 
   const groupedByMonth = useMemo(() => {
     const map = new Map<string, Transaction[]>()
@@ -150,6 +240,30 @@ export function TransactionsManager({
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleExportCsv() {
+    if (filteredTransactions.length === 0) {
+      toast.info('Нет операций для экспорта по текущим фильтрам')
+      return
+    }
+    const csv = toCsv(filteredTransactions, [
+      { key: 'created_at', label: 'Дата', map: (r) => formatTransactionDateRu(r.created_at) },
+      { key: 'type', label: 'Тип', map: (r) => (r.type === 'income' ? 'Доход' : 'Расход') },
+      { key: 'category_name', label: 'Категория', map: (r) => r.category_name ?? '' },
+      { key: 'wallet_name', label: 'Кошелёк', map: (r) => r.wallet_name ?? '' },
+      {
+        key: 'partner_name',
+        label: 'Получатель',
+        map: (r) => [r.partner_name, r.worker_name].filter(Boolean).join(' / '),
+      },
+      { key: 'description', label: 'Описание', map: (r) => r.description ?? '' },
+      { key: 'amount', label: 'Сумма, ₽', map: (r) => Number(r.amount) },
+    ])
+    const stamp = todayStampForFilename()
+    const prefix = type === 'income' ? 'income' : 'expense'
+    downloadCsv(`${prefix}-${stamp}.csv`, csv)
+    toast.success(`Экспортировано ${filteredTransactions.length} операций`)
   }
 
   async function handleDelete(id: number) {
@@ -271,50 +385,56 @@ export function TransactionsManager({
     )
   }
 
+  const filterCategoryItems = useMemo(
+    () => categories.filter((c) => activeCategoryIds.has(c.id)),
+    [categories, activeCategoryIds],
+  )
+  const filterWalletItems = useMemo(
+    () => wallets.filter((w) => activeWalletIds.has(w.id)),
+    [wallets, activeWalletIds],
+  )
+
   return (
     <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <Label htmlFor="month-filter" className="shrink-0 text-sm text-muted-foreground sm:whitespace-nowrap">
-            Период
-          </Label>
-          <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger
-              id="month-filter"
-              className="h-11 w-full text-base sm:h-10 sm:w-[min(100%,280px)] sm:text-sm"
-            >
-              <SelectValue placeholder="Месяц" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все месяцы (по группам)</SelectItem>
-              {monthOptions.map((key) => (
-                <SelectItem key={key} value={key}>
-                  {transactionMonthTitleRu(key)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
           <span
             className={cn(
               'min-w-0 break-words text-sm font-semibold tabular-nums sm:text-base',
               colorClass,
             )}
           >
-            {monthFilter === 'all' ? 'Всего' : 'За месяц'}: {type === 'income' ? '+' : '-'}
+            {filtersActive ? 'По фильтру' : 'Всего'}: {type === 'income' ? '+' : '-'}
             {formatCurrency(periodTotal)}
+            <span className="ml-2 text-muted-foreground/80 font-normal">
+              · {filteredTransactions.length} оп.
+            </span>
           </span>
-        </div>
-        <div className="flex w-full justify-stretch sm:w-auto sm:justify-end">
-        <Dialog open={isOpen} onOpenChange={(open) => {
-          setIsOpen(open)
-          if (!open) setEditTransaction(null)
-        }}>
-          <DialogTrigger asChild>
-            <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
-              <Plus className="h-4 w-4 shrink-0" />
-              Добавить {type === 'income' ? 'доход' : 'расход'}
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full gap-2 sm:h-10 sm:w-auto"
+              onClick={handleExportCsv}
+              disabled={filteredTransactions.length === 0}
+              aria-label="Экспортировать операции в CSV"
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              <span>CSV</span>
             </Button>
-          </DialogTrigger>
+            <Dialog
+              open={isOpen}
+              onOpenChange={(open) => {
+                setIsOpen(open)
+                if (!open) setEditTransaction(null)
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button className="h-11 w-full gap-2 sm:h-10 sm:w-auto">
+                  <Plus className="h-4 w-4 shrink-0" />
+                  Добавить {type === 'income' ? 'доход' : 'расход'}
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-md max-sm:p-4 sm:max-w-lg">
             <DialogHeader className="min-w-0 pr-8 text-left">
               <DialogTitle className="break-words text-base leading-snug sm:text-lg">
@@ -427,7 +547,113 @@ export function TransactionsManager({
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
+            </Dialog>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_repeat(3,minmax(0,1fr))_auto]">
+          <div className="relative min-w-0">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              placeholder="Поиск по описанию, категории, получателю…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-11 w-full pl-9 pr-9 text-base sm:h-10 sm:text-sm"
+              aria-label="Поиск по операциям"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Очистить поиск"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger
+              aria-label="Месяц"
+              className="h-11 w-full text-base sm:h-10 sm:text-sm"
+            >
+              <SelectValue placeholder="Месяц" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все месяцы</SelectItem>
+              {monthOptions.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {transactionMonthTitleRu(key)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger
+              aria-label="Категория"
+              className="h-11 w-full text-base sm:h-10 sm:text-sm"
+            >
+              <SelectValue placeholder="Категория" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все категории</SelectItem>
+              {filterCategoryItems.map((c) => (
+                <SelectItem key={c.id} value={c.id.toString()}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={walletFilter} onValueChange={setWalletFilter}>
+            <SelectTrigger
+              aria-label="Кошелёк"
+              className="h-11 w-full text-base sm:h-10 sm:text-sm"
+            >
+              <SelectValue placeholder="Кошелёк" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все кошельки</SelectItem>
+              {filterWalletItems.map((w) => (
+                <SelectItem key={w.id} value={w.id.toString()}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-stretch gap-2">
+            <Select value={counterpartyFilter} onValueChange={setCounterpartyFilter}>
+              <SelectTrigger
+                aria-label="Получатель"
+                className="h-11 w-full min-w-0 text-base sm:h-10 sm:text-sm lg:w-[200px]"
+              >
+                <SelectValue placeholder="Получатель" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все получатели</SelectItem>
+                {counterpartyOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {filtersActive ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={resetFilters}
+                className="h-11 shrink-0 px-3 text-sm sm:h-10"
+                aria-label="Сбросить фильтры"
+              >
+                <X className="mr-1 h-4 w-4" />
+                Сброс
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -442,9 +668,14 @@ export function TransactionsManager({
           {transactions.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Нет операций</p>
           ) : filteredTransactions.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Нет операций за выбранный месяц
-            </p>
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <p className="text-muted-foreground">Ничего не найдено по текущим фильтрам</p>
+              {filtersActive ? (
+                <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
+                  Сбросить фильтры
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <div className="space-y-6 sm:space-y-8">
               {groupedByMonth.map(([key, rows]) => {

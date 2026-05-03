@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -21,12 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { FileText, Check, X, Clock } from 'lucide-react'
+import { FileText, Check, X, Clock, Download, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { PartnerRequest, Wallet } from '@/lib/db'
 import { estimatePartnerRequestBonus } from '@/lib/partner-bonus'
 import { formatCustomerPhoneDisplay } from '@/lib/phone-format'
+import { downloadCsv, todayStampForFilename, toCsv } from '@/lib/csv'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -57,12 +59,87 @@ export function RequestsManager({
   /** Radix Select не участвует в FormData — значение кошелька держим здесь и дублируем в hidden input */
   const [approveWalletId, setApproveWalletId] = useState('')
   const [actionError, setActionError] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
+    'all',
+  )
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     setRequests(initialRequests)
   }, [initialRequests])
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length
+  const approvedCount = requests.filter((r) => r.status === 'approved').length
+  const rejectedCount = requests.filter((r) => r.status === 'rejected').length
+
+  const filteredRequests = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    return requests.filter((r) => {
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false
+      if (needle) {
+        const haystack = [
+          r.partner_name,
+          r.category_name,
+          r.customer_phone,
+          r.address,
+          r.work_volume,
+          r.work_comment,
+          r.actual_work_volume,
+          r.admin_comment,
+          r.recommended_specialist,
+          String(r.amount),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        if (!haystack.includes(needle)) return false
+      }
+      return true
+    })
+  }, [requests, statusFilter, search])
+
+  function handleExportCsv() {
+    if (filteredRequests.length === 0) {
+      toast.info('Нет заявок для экспорта по текущим фильтрам')
+      return
+    }
+    const csv = toCsv(filteredRequests, [
+      {
+        key: 'created_at',
+        label: 'Дата',
+        map: (r) => format(new Date(r.created_at), 'd MMM yyyy HH:mm', { locale: ru }),
+      },
+      {
+        key: 'status',
+        label: 'Статус',
+        map: (r) => statusConfig[r.status]?.label ?? r.status,
+      },
+      { key: 'partner_name', label: 'Партнёр', map: (r) => r.partner_name ?? '' },
+      { key: 'category_name', label: 'Категория', map: (r) => r.category_name ?? '' },
+      { key: 'customer_phone', label: 'Телефон заказчика', map: (r) => r.customer_phone ?? '' },
+      { key: 'address', label: 'Адрес', map: (r) => r.address ?? '' },
+      {
+        key: 'square_meters',
+        label: 'Площадь, м²',
+        map: (r) => (r.square_meters != null ? Number(r.square_meters) : ''),
+      },
+      { key: 'amount', label: 'Сумма, ₽', map: (r) => Number(r.amount) },
+      {
+        key: 'work_volume',
+        label: 'Объём в заявке',
+        map: (r) => r.work_volume ?? '',
+      },
+      {
+        key: 'actual_work_volume',
+        label: 'Фактический объём',
+        map: (r) => r.actual_work_volume ?? '',
+      },
+      { key: 'work_comment', label: 'Комментарий партнёра', map: (r) => r.work_comment ?? '' },
+      { key: 'admin_comment', label: 'Комментарий админа', map: (r) => r.admin_comment ?? '' },
+    ])
+    downloadCsv(`requests-${todayStampForFilename()}.csv`, csv)
+    toast.success(`Экспортировано ${filteredRequests.length} заявок`)
+  }
 
   useEffect(() => {
     setActionError('')
@@ -298,25 +375,104 @@ export function RequestsManager({
         </DialogContent>
       </Dialog>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-4">
-        <Badge variant="outline" className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-lg">
-          Ожидают: {pendingCount}
-        </Badge>
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Badge variant="outline" className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base">
+            Ожидают: {pendingCount}
+          </Badge>
+          <Badge variant="outline" className="border-success/40 bg-success/5 px-3 py-1.5 text-sm text-success">
+            Одобрено: {approvedCount}
+          </Badge>
+          <Badge variant="outline" className="border-destructive/40 bg-destructive/5 px-3 py-1.5 text-sm text-destructive">
+            Отклонено: {rejectedCount}
+          </Badge>
+          <div className="ml-auto">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 gap-2"
+              onClick={handleExportCsv}
+              disabled={filteredRequests.length === 0}
+              aria-label="Экспортировать заявки в CSV"
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              CSV
+            </Button>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              placeholder="Поиск по партнёру, телефону, адресу, объёму…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-11 w-full pl-9 pr-9 text-base sm:h-10 sm:text-sm"
+              aria-label="Поиск по заявкам"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Очистить поиск"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) =>
+              setStatusFilter(v as 'all' | 'pending' | 'approved' | 'rejected')
+            }
+          >
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[200px]" aria-label="Статус">
+              <SelectValue placeholder="Статус" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все статусы</SelectItem>
+              <SelectItem value="pending">Только новые</SelectItem>
+              <SelectItem value="approved">Одобренные</SelectItem>
+              <SelectItem value="rejected">Отклонённые</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Заявки ({requests.length})
+            Заявки ({filteredRequests.length}
+            {filteredRequests.length !== requests.length ? ` из ${requests.length}` : ''})
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-hidden">
           {requests.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Нет заявок</p>
+          ) : filteredRequests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <p className="text-muted-foreground">Ничего не найдено по фильтрам</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter('all')
+                  setSearch('')
+                }}
+              >
+                Сбросить фильтры
+              </Button>
+            </div>
           ) : (
             <div className="space-y-3">
-              {requests.map((request) => {
+              {filteredRequests.map((request) => {
                 const config = statusConfig[request.status]
                 const StatusIcon = config.icon
                 return (

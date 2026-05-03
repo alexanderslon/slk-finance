@@ -51,6 +51,12 @@ type Props = {
   initialMonth: string
   initialIncome: number
   initialExpenses: number
+  /**
+   * Опционально: уведомлять родителя о смене месяца. Используется, чтобы
+   * связанные компоненты (аналитика, графики) пересчитывались синхронно
+   * без отдельного селекта месяца.
+   */
+  onMonthChange?: (month: string) => void
 }
 
 export function DashboardStats({
@@ -62,6 +68,7 @@ export function DashboardStats({
   initialMonth,
   initialIncome,
   initialExpenses,
+  onMonthChange: onMonthChangeProp,
 }: Props) {
   const [month, setMonth] = useState(initialMonth)
   const [income, setIncome] = useState(initialIncome)
@@ -77,6 +84,7 @@ export function DashboardStats({
 
   async function onMonthChange(value: string) {
     setMonth(value)
+    onMonthChangeProp?.(value)
     setLoading(true)
     try {
       const res = await fetch(`/api/stats/month?month=${encodeURIComponent(value)}`)

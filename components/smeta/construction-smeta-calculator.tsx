@@ -45,7 +45,8 @@ import {
 import { buildSmetaPersistBody } from '@/lib/smeta-api-body'
 import { sumInWordsRu } from '@/lib/sum-in-words-ru'
 import { toast } from 'sonner'
-import { Copy, Trash2 } from 'lucide-react'
+import { Copy, Trash2, Download } from 'lucide-react'
+import { downloadCsv, todayStampForFilename, toCsv } from '@/lib/csv'
 
 const PREVIEW_STORAGE_PREFIX = "smeta_doc:";
 /** Сколько часов держим ключи предпросмотра в localStorage до автоочистки. */
@@ -719,6 +720,37 @@ export function ConstructionSmetaCalculator() {
       setApiError('Ошибка сети')
     }
   }, [applyDocState, listSelect])
+
+  const handleExportListCsv = useCallback(() => {
+    if (estimateList.length === 0) {
+      toast.info('Список смет пуст — экспортировать нечего')
+      return
+    }
+    const csv = toCsv(estimateList, [
+      {
+        key: 'document_number',
+        label: 'Номер документа',
+        map: (r) => r.document_number ?? `#${r.id}`,
+      },
+      { key: 'title', label: 'Название', map: (r) => r.title ?? '' },
+      {
+        key: 'total_amount',
+        label: 'Сумма, ₽',
+        map: (r) => {
+          if (r.total_amount == null) return ''
+          const n =
+            typeof r.total_amount === 'number'
+              ? r.total_amount
+              : parseFloat(String(r.total_amount).replace(/\s/g, '').replace(',', '.'))
+          return Number.isFinite(n) ? n : ''
+        },
+      },
+      { key: 'created_at', label: 'Создана', map: (r) => r.created_at ?? '' },
+      { key: 'updated_at', label: 'Обновлена', map: (r) => r.updated_at ?? '' },
+    ])
+    downloadCsv(`smetas-${todayStampForFilename()}.csv`, csv)
+    toast.success(`Экспортировано ${estimateList.length} смет`)
+  }, [estimateList])
 
   const requestDeleteSaved = useCallback(() => {
     const id = Number(listSelect)
@@ -1676,6 +1708,17 @@ export function ConstructionSmetaCalculator() {
                   >
                     <Trash2 className="mr-1.5 h-4 w-4" aria-hidden />
                     {deleting ? 'Удаление…' : 'Удалить'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full shrink-0 sm:w-auto"
+                    onClick={handleExportListCsv}
+                    disabled={estimateList.length === 0}
+                    title="Скачать список смет в CSV (для Excel/Numbers)"
+                  >
+                    <Download className="mr-1.5 h-4 w-4" aria-hidden />
+                    CSV
                   </Button>
                 </div>
               </div>
