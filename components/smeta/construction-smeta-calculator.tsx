@@ -1590,25 +1590,29 @@ export function ConstructionSmetaCalculator() {
         )}
 
         {/*
-         * Мобильный предпросмотр: документ сверстан под A4 (~794px). На узком
-         * экране (≈390px) он естественно обрежется. Заворачиваем в горизонтальный
-         * скролл-контейнер, чтобы пользователь мог свайпом увидеть весь лист
-         * именно так, как он напечатается. На десктопе поведение прежнее —
-         * центрирование и max-width.
+         * Мобильный предпросмотр: документ свёрстан под A4 — печатная ширина
+         * листа за вычетом полей ~760px. На узких экранах (≈390px) внутрь
+         * не уместить — иначе таблица «схлопывает» текстовые колонки до 1 буквы
+         * в строке (см. отчёт пользователя). Поэтому фиксируем ширину 760px
+         * и оборачиваем в горизонтальный скролл-контейнер: пользователь свайпом
+         * видит документ ровно так, как он напечатается на A4.
+         *
+         * `width: 760px` (а не `min-width: min(100%, 760px)`) важно: иначе на
+         * мобильном получится 100% от 480px и колонки опять сплющит.
          */}
         <div className="mx-auto max-w-[1200px] px-2 py-3 sm:p-4">
-          <div className="-mx-2 overflow-x-auto px-2 pb-3 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+          <div className="-mx-2 overflow-x-auto px-2 pb-3 sm:mx-0 sm:px-0 sm:pb-0 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]">
             <div
               ref={printContentRef}
               data-print-root
               className="mx-auto box-border bg-white rounded-2xl shadow-md border border-gray-100 p-3 sm:p-4"
-              style={{ minWidth: 'min(100%, 760px)' }}
+              style={{ width: '760px', maxWidth: 'none' }}
             >
               {renderPrintDocument()}
             </div>
           </div>
           <p className="no-print mt-2 text-center text-[11px] leading-snug text-gray-500 sm:hidden">
-            Свайп по документу — посмотреть, как он напечатается на листе A4.
+            Свайп по документу — это ровно тот вид, что попадёт на лист A4.
           </p>
         </div>
       </div>
