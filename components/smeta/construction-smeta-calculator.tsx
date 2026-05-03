@@ -1557,14 +1557,27 @@ export function ConstructionSmetaCalculator() {
           </div>
         )}
 
-        <div className="max-w-[1200px] mx-auto p-4">
-          <div
-            ref={printContentRef}
-            data-print-root
-            className="bg-white rounded-2xl shadow-md border border-gray-100 p-4"
-          >
-            {renderPrintDocument()}
+        {/*
+         * Мобильный предпросмотр: документ сверстан под A4 (~794px). На узком
+         * экране (≈390px) он естественно обрежется. Заворачиваем в горизонтальный
+         * скролл-контейнер, чтобы пользователь мог свайпом увидеть весь лист
+         * именно так, как он напечатается. На десктопе поведение прежнее —
+         * центрирование и max-width.
+         */}
+        <div className="mx-auto max-w-[1200px] px-2 py-3 sm:p-4">
+          <div className="-mx-2 overflow-x-auto px-2 pb-3 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+            <div
+              ref={printContentRef}
+              data-print-root
+              className="mx-auto box-border bg-white rounded-2xl shadow-md border border-gray-100 p-3 sm:p-4"
+              style={{ minWidth: 'min(100%, 760px)' }}
+            >
+              {renderPrintDocument()}
+            </div>
           </div>
+          <p className="no-print mt-2 text-center text-[11px] leading-snug text-gray-500 sm:hidden">
+            Свайп по документу — посмотреть, как он напечатается на листе A4.
+          </p>
         </div>
       </div>
     );

@@ -34,6 +34,7 @@ export function AdminSidebar({
       <Button
         variant="outline"
         size="icon"
+        data-no-print
         className="fixed z-60 h-11 w-11 rounded-lg border-border bg-card shadow-sm md:hidden"
         style={{
           top: 'max(0.75rem, env(safe-area-inset-top, 0px))',
@@ -48,6 +49,7 @@ export function AdminSidebar({
       {/* Overlay */}
       {isOpen && (
         <div
+          data-no-print
           className="fixed inset-0 z-55 bg-background/80 backdrop-blur-sm md:hidden"
           onClick={() => setIsOpen(false)}
           aria-hidden
@@ -56,6 +58,7 @@ export function AdminSidebar({
 
       {/* Sidebar */}
       <aside
+        data-no-print
         className={cn(
           'fixed inset-y-0 left-0 z-56 flex w-[min(18rem,88vw)] flex-col border-r border-border bg-sidebar shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 md:shadow-none lg:w-72',
           isOpen ? 'translate-x-0' : '-translate-x-full'

@@ -10,6 +10,7 @@ export function PartnerMobileNav() {
 
   return (
     <nav
+      data-no-print
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom,0px)] pt-1 shadow-[0_-4px_24px_rgba(0,0,0,0.12)] backdrop-blur-lg md:hidden"
       aria-label="Нижняя навигация"
     >

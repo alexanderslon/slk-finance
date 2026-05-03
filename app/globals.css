@@ -143,7 +143,13 @@
 
 /* Смета (construction calculator): печать / предпросмотр */
 @media print {
-  body:has(.smeta-calculator) {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+
+  body:has(.smeta-calculator),
+  body:has([data-print-root]) {
     background: white !important;
     margin: 0;
     padding: 0;
@@ -184,31 +190,45 @@
     margin-bottom: 16px !important;
   }
 
-  @page {
-    size: A4 portrait;
-    margin: 15mm;
+  /*
+   * Универсальная защита: ЛЮБЫЕ элементы, помеченные как "не для печати"
+   * (admin-сайдбар, мобильная нижняя навигация, баннеры и т.п.) — скрываем
+   * безусловно, даже если печать запущена браузером (Cmd+P / Ctrl+P / Save as PDF),
+   * а не через нашу кнопку «Печать». Это закрывает баг «иконки дашборда/кошельков
+   * на каждой странице PDF».
+   */
+  [data-no-print],
+  [data-no-print] * {
+    display: none !important;
   }
 
   /*
-   * Режим «только документ» — включается через class="smeta-printing" на <html>
-   * перед window.print(). Прячем ВСЁ на странице (включая admin sidebar / mobile nav,
-   * редактируемую таблицу, кнопки, карточки итогов), оставляя только блок документа.
-   * Используем visibility: к ней применяется правило «потомок переопределяет родителя»,
-   * а сам блок остаётся в потоке — корректно постранично разбивается на много страниц.
+   * Режим «только документ»: автоматически активируется на любой странице,
+   * где есть `[data-print-root]` (превью сметы или скрытый print-only блок
+   * внутри калькулятора). Прячем ВЕСЬ DOM через visibility:hidden, кроме самого
+   * корня документа и его потомков. visibility (а не display:none) сохраняет
+   * блок в потоке — браузер корректно разбивает длинный документ на страницы.
+   *
+   * Дополнительно срабатывает по html.smeta-printing — это сохранилось для
+   * обратной совместимости с явной кнопкой «Печать», которая ставит этот класс.
    */
   html.smeta-printing,
-  html.smeta-printing body {
+  html.smeta-printing body,
+  body:has([data-print-root]) {
     background: #ffffff !important;
     color: #18181b !important;
   }
 
-  html.smeta-printing body * {
+  html.smeta-printing body *,
+  body:has([data-print-root]) * {
     visibility: hidden !important;
     box-shadow: none !important;
   }
 
   html.smeta-printing body [data-print-root],
-  html.smeta-printing body [data-print-root] * {
+  html.smeta-printing body [data-print-root] *,
+  body:has([data-print-root]) [data-print-root],
+  body:has([data-print-root]) [data-print-root] * {
     visibility: visible !important;
   }
 
@@ -217,7 +237,8 @@
    * пользователь в диалоге печати выберет «Без полей» — содержимое всё равно
    * не уйдёт под физический край листа благодаря этому padding.
    */
-  html.smeta-printing body [data-print-root] {
+  html.smeta-printing body [data-print-root],
+  body:has([data-print-root]) [data-print-root] {
     position: absolute !important;
     inset: 0 !important;
     margin: 0 !important;
