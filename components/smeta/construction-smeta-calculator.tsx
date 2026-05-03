@@ -58,26 +58,47 @@ function safeFilename(s: string): string {
   return s.replace(/[^\w\-]+/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
 }
 
-/** Ширина A4 в CSS-пикселях (~210 mm при 96 DPI). Без этого на телефоне в JPEG попадает узкая колонка экрана. */
-const A4_EXPORT_WIDTH_PX = 794;
+/**
+ * Подготовка JPG к стандартной печати A4 (портрет).
+ *
+ * Браузерный CSS-пиксель = 1/96″ → A4 (210 × 297 мм) ровно 794 × 1123 CSS px.
+ * Экспорт выводим именно в этих пропорциях, добавляем поля как у `@page` в печати —
+ * чтобы JPG, отправленный на принтер «как есть» (Fit / 100 %), совпадал с системной печатью.
+ */
+const A4_PAGE_WIDTH_CSS_PX = 794
+const A4_PAGE_HEIGHT_CSS_PX = 1123
+/** Поля под стандартный принтер (совпадают с `@page { margin }` в globals.css). */
+const A4_PAGE_MARGIN_MM = 12
+/** 200 DPI — оптимальный компромисс между качеством печати и весом файла. */
+const PRINT_TARGET_DPI = 200
+const PRINT_PIXEL_RATIO = PRINT_TARGET_DPI / 96
 
 async function withA4PageWidthForExport<T>(el: HTMLElement, run: () => Promise<T>): Promise<T> {
-  const prevWidth = el.style.width;
-  const prevMaxWidth = el.style.maxWidth;
-  const prevMinWidth = el.style.minWidth;
-  const prevBoxSizing = el.style.boxSizing;
-  el.style.boxSizing = "border-box";
-  el.style.width = `${A4_EXPORT_WIDTH_PX}px`;
-  el.style.maxWidth = `${A4_EXPORT_WIDTH_PX}px`;
-  el.style.minWidth = `${A4_EXPORT_WIDTH_PX}px`;
-  void el.offsetHeight;
+  const prevWidth = el.style.width
+  const prevMaxWidth = el.style.maxWidth
+  const prevMinWidth = el.style.minWidth
+  const prevMinHeight = el.style.minHeight
+  const prevBoxSizing = el.style.boxSizing
+  const prevPadding = el.style.padding
+  const prevBackground = el.style.background
+  el.style.boxSizing = 'border-box'
+  el.style.width = `${A4_PAGE_WIDTH_CSS_PX}px`
+  el.style.maxWidth = `${A4_PAGE_WIDTH_CSS_PX}px`
+  el.style.minWidth = `${A4_PAGE_WIDTH_CSS_PX}px`
+  el.style.minHeight = `${A4_PAGE_HEIGHT_CSS_PX}px`
+  el.style.padding = `${A4_PAGE_MARGIN_MM}mm`
+  el.style.background = '#ffffff'
+  void el.offsetHeight
   try {
-    return await run();
+    return await run()
   } finally {
-    el.style.width = prevWidth;
-    el.style.maxWidth = prevMaxWidth;
-    el.style.minWidth = prevMinWidth;
-    el.style.boxSizing = prevBoxSizing;
+    el.style.width = prevWidth
+    el.style.maxWidth = prevMaxWidth
+    el.style.minWidth = prevMinWidth
+    el.style.minHeight = prevMinHeight
+    el.style.boxSizing = prevBoxSizing
+    el.style.padding = prevPadding
+    el.style.background = prevBackground
   }
 }
 
@@ -885,14 +906,21 @@ export function ConstructionSmetaCalculator() {
       const fonts = (document as any).fonts;
       if (fonts?.ready) await fonts.ready;
 
-      const dataUrl = await withA4PageWidthForExport(el, () =>
-        toJpeg(el, {
-          quality: 0.92,
-          backgroundColor: "#ffffff",
-          pixelRatio: 2,
+      const dataUrl = await withA4PageWidthForExport(el, () => {
+        // height — натуральная высота сверстанного A4-блока: на короткой смете это
+        // ровно одна A4-страница, на длинной — несколько (принтер раскинет на N страниц).
+        const exportHeight = Math.max(A4_PAGE_HEIGHT_CSS_PX, el.scrollHeight)
+        return toJpeg(el, {
+          quality: 0.95,
+          backgroundColor: '#ffffff',
+          pixelRatio: PRINT_PIXEL_RATIO,
           cacheBust: true,
+          width: A4_PAGE_WIDTH_CSS_PX,
+          height: exportHeight,
+          canvasWidth: Math.round(A4_PAGE_WIDTH_CSS_PX * PRINT_PIXEL_RATIO),
+          canvasHeight: Math.round(exportHeight * PRINT_PIXEL_RATIO),
         })
-      );
+      })
       if (!dataUrl) throw new Error("Не удалось сформировать изображение");
 
       const filename = `${baseName}.jpg`;
