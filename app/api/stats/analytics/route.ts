@@ -97,7 +97,10 @@ export async function GET(request: NextRequest) {
         WHERE t.created_at >= ${start.toISOString()}
           AND t.created_at < ${end.toISOString()}
           AND (t.partner_id IS NOT NULL OR t.worker_id IS NOT NULL)
-        GROUP BY name, kind
+        -- Группируем позиционно: алиас "name" в Postgres ambiguous, потому что
+        -- partners.name и workers.name оба видимы в скоупе и валят запрос
+        -- ошибкой "column reference is ambiguous".
+        GROUP BY 1, 2
         ORDER BY expense DESC, income DESC
         LIMIT 10
       `,
