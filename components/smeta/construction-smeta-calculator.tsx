@@ -34,6 +34,7 @@ import {
   blankHeader,
   defaultHeader,
   firstEnabledStage,
+  inferEnabledStagesFromRows,
   nextRowIdFromRows,
   normalizeEnabledStages,
   normalizeStageDeadlines,
@@ -42,16 +43,47 @@ import {
   stageSubtotalLabel,
 } from '@/lib/smeta-types'
 import { buildSmetaPersistBody } from '@/lib/smeta-api-body'
-import { Trash2 } from 'lucide-react'
+import { sumInWordsRu } from '@/lib/sum-in-words-ru'
+import { toast } from 'sonner'
+import { Copy, Trash2 } from 'lucide-react'
 
 const PREVIEW_STORAGE_PREFIX = "smeta_doc:";
+/** Сколько часов держим ключи предпросмотра в localStorage до автоочистки. */
+const PREVIEW_STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function makePreviewKey(): string {
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  return `${PREVIEW_STORAGE_PREFIX}${id}`;
+  return `${PREVIEW_STORAGE_PREFIX}${id}_${Date.now()}`;
+}
+
+/**
+ * Удаляет ключи предпросмотра старше суток. Ключи имеют вид
+ * `smeta_doc:<uuid>_<timestamp>`; если timestamp нет — считаем устаревшим.
+ *
+ * Без этой чистки `localStorage` рос до ~5 МБ (квота браузера) и блокировал
+ * сохранение новой сметы.
+ */
+function pruneOldPreviewKeys() {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const now = Date.now();
+    const toDelete: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(PREVIEW_STORAGE_PREFIX)) continue;
+      const tsPart = key.split('_').pop();
+      const ts = tsPart ? Number(tsPart) : NaN;
+      if (!Number.isFinite(ts) || now - ts > PREVIEW_STORAGE_TTL_MS) {
+        toDelete.push(key);
+      }
+    }
+    for (const k of toDelete) localStorage.removeItem(k);
+  } catch {
+    /* приватный режим / квота — игнорируем */
+  }
 }
 
 function safeFilename(s: string): string {
@@ -366,21 +398,29 @@ export function ConstructionSmetaCalculator() {
 
   const applyDocState = useCallback((doc: DocState) => {
     if (doc.header) setHeader({ ...doc.header })
-    if (doc.rows?.length) {
-      setRows(
-        doc.rows.map((r) => ({
+    // Если в загруженной смете строк нет — реально применяем пустой массив,
+    // чтобы UI отразил «нет позиций», а не оставлял старую таблицу.
+    const incomingRows: RowData[] = Array.isArray(doc.rows)
+      ? doc.rows.map((r) => ({
           ...r,
           stage: normalizeSmetaStage((r as RowData).stage),
-        })),
-      )
-      nextIdRef.current = nextRowIdFromRows(doc.rows)
-    }
+        }))
+      : []
+    setRows(incomingRows)
+    nextIdRef.current = nextRowIdFromRows(incomingRows)
+
     if (typeof doc.prepayment === 'string') setPrepayment(doc.prepayment)
     if (typeof doc.laborer === 'string') setLaborer(doc.laborer)
     if (typeof doc.otkat === 'string') setOtkat(doc.otkat)
     if (typeof doc.overheadPercent === 'string') setOverheadPercent(doc.overheadPercent)
     else setOverheadPercent('0')
-    setEnabledStages(normalizeEnabledStages(doc.enabledStages))
+
+    // Legacy-сметы могут не иметь enabledStages — раньше дефолтили на 1–4 и
+    // теряли строки этапов 5/6. Теперь дефолт — этапы, реально присутствующие в строках.
+    const enabled = Array.isArray(doc.enabledStages)
+      ? normalizeEnabledStages(doc.enabledStages)
+      : inferEnabledStagesFromRows(incomingRows)
+    setEnabledStages(enabled)
     setStageDeadlines(normalizeStageDeadlines(doc.stageDeadlines))
   }, [])
 
@@ -494,9 +534,12 @@ export function ConstructionSmetaCalculator() {
         })
         if (!res.ok) {
           const err = (await res.json().catch(() => ({}))) as { error?: string }
-          setApiError(err.error || 'Не удалось сохранить')
+          const msg = err.error || 'Не удалось сохранить'
+          setApiError(msg)
+          toast.error(msg)
           return
         }
+        toast.success('Смета сохранена')
       } else {
         const res = await fetch('/api/smeta', {
           method: 'POST',
@@ -505,24 +548,90 @@ export function ConstructionSmetaCalculator() {
         })
         const data = (await res.json().catch(() => ({}))) as { id?: number; error?: string }
         if (!res.ok) {
-          setApiError(data.error || 'Не удалось создать смету')
+          const msg = data.error || 'Не удалось создать смету'
+          setApiError(msg)
+          toast.error(msg)
           return
         }
         if (typeof data.id === 'number') {
           setEstimateId(data.id)
           setListSelect(String(data.id))
         }
+        toast.success('Смета создана')
       }
       await refreshList()
       if (estimateId) setListSelect(String(estimateId))
     } catch {
       setApiError('Ошибка сети при сохранении')
+      toast.error('Ошибка сети при сохранении')
     } finally {
       setSaving(false)
     }
   }, [
     estimateId,
     enabledStages,
+    header,
+    laborer,
+    otkat,
+    overheadPercent,
+    prepayment,
+    refreshList,
+    rows,
+    stageDeadlines,
+    totals,
+  ])
+
+  /**
+   * Сохранить текущую смету как НОВУЮ (копия). Удобно делать аналог сметы под
+   * другого заказчика без потери оригинала. Авто-инкремент номера документа.
+   */
+  const handleSaveAsCopy = useCallback(async () => {
+    setApiError('')
+    setSaving(true)
+    try {
+      const nextNumber = nextDocumentNumberFromList(estimateList)
+      const newHeader: HeaderData = { ...header, documentNumber: nextNumber }
+      const body = buildSmetaPersistBody(
+        newHeader,
+        rows,
+        prepayment,
+        laborer,
+        otkat,
+        overheadPercent,
+        enabledStages,
+        totals,
+        stageDeadlines,
+        // Копия не должна уносить связь с заявкой — это новая смета.
+        null,
+      )
+      const res = await fetch('/api/smeta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = (await res.json().catch(() => ({}))) as { id?: number; error?: string }
+      if (!res.ok) {
+        const msg = data.error || 'Не удалось создать копию'
+        setApiError(msg)
+        toast.error(msg)
+        return
+      }
+      if (typeof data.id === 'number') {
+        setEstimateId(data.id)
+        setListSelect(String(data.id))
+      }
+      setHeader(newHeader)
+      toast.success(`Создана копия № ${nextNumber}`)
+      await refreshList()
+    } catch {
+      setApiError('Ошибка сети при создании копии')
+      toast.error('Ошибка сети при создании копии')
+    } finally {
+      setSaving(false)
+    }
+  }, [
+    enabledStages,
+    estimateList,
     header,
     laborer,
     otkat,
@@ -790,6 +899,10 @@ export function ConstructionSmetaCalculator() {
               <div className="text-2xl font-extrabold text-gray-900 tabular-nums">{fmt(totals.totalUpperSum)} ₽</div>
             </div>
           </div>
+          <div className="mt-3 rounded border border-gray-300 bg-gray-50 px-3 py-2 text-[12px] leading-snug text-gray-800">
+            <span className="font-semibold">Сумма прописью:</span>{' '}
+            <span className="italic">{sumInWordsRu(totals.totalUpperSum)}</span>
+          </div>
         </div>
 
         <div className="mt-10 pt-6 border-t border-gray-300 grid grid-cols-2 gap-8 text-sm">
@@ -805,6 +918,7 @@ export function ConstructionSmetaCalculator() {
   );
 
   const openPreview = useCallback(() => {
+    pruneOldPreviewKeys()
     const key = makePreviewKey()
     const state: DocState = {
       header,
@@ -820,6 +934,7 @@ export function ConstructionSmetaCalculator() {
       localStorage.setItem(key, JSON.stringify(state))
     } catch {
       setApiError('Не удалось записать предпросмотр в память браузера')
+      toast.error('Не удалось открыть предпросмотр: локальная память заполнена')
       return
     }
 
@@ -866,12 +981,21 @@ export function ConstructionSmetaCalculator() {
 
   /** Вернуться из предпросмотра: `window.close()` не работает после обычного `router.push` в той же вкладке. */
   const closePreview = useCallback(() => {
+    // Чистим ключ за собой + любые устаревшие ключи предыдущих предпросмотров.
+    if (previewKey) {
+      try {
+        localStorage.removeItem(previewKey)
+      } catch {
+        /* ignore */
+      }
+    }
+    pruneOldPreviewKeys()
     const params = new URLSearchParams(searchParams.toString())
     params.delete('preview')
     params.delete('doc')
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname)
-  }, [pathname, router, searchParams])
+  }, [pathname, previewKey, router, searchParams])
 
   const runSystemPrint = useCallback(() => {
     // Включаем «островок печати»: globals.css по html.smeta-printing скрывает всё, кроме [data-print-root].
@@ -1551,6 +1675,19 @@ export function ConstructionSmetaCalculator() {
                 >
                   {saving ? 'Сохранение…' : estimateId ? 'Сохранить' : 'Сохранить как новую'}
                 </Button>
+                {estimateId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full shrink-0 gap-1.5 sm:w-auto"
+                    onClick={() => void handleSaveAsCopy()}
+                    disabled={saving}
+                    title="Создать копию этой сметы под другого заказчика"
+                  >
+                    <Copy className="h-4 w-4" aria-hidden />
+                    Копия
+                  </Button>
+                ) : null}
                 <Button type="button" variant="outline" className="w-full shrink-0 sm:w-auto" onClick={handleNew}>
                   Новая смета
                 </Button>
@@ -1778,7 +1915,7 @@ export function ConstructionSmetaCalculator() {
             </div>
             <div className="mt-3 border-t border-zinc-100 pt-3">
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-600">Итого (работники + откат):</span>
+                <span className="text-zinc-600">Итого (работники + разнорабочий + откат):</span>
                 <span className="font-extrabold text-amber-700">{fmt(totals.totalExpenses)} ₽</span>
               </div>
             </div>

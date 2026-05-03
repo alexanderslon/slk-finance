@@ -140,6 +140,17 @@ export async function PUT(request: NextRequest, context: Ctx) {
 
     const json = jsonStringifyPayload(stored)
 
+    /*
+     * Если клиент НЕ прислал явно `partner_request_id` (типичный сценарий —
+     * сохранение из калькулятора, у которого этого поля в форме нет),
+     * сохраняем существующее значение в БД, а не обнуляем колонку.
+     * Это лечит потерю связи «заявка → смета» при первом же ручном Save.
+     */
+    const partnerRequestExplicit = Object.prototype.hasOwnProperty.call(
+      body,
+      'partner_request_id',
+    )
+
     const result = await sql`
       UPDATE construction_estimates
       SET
@@ -153,7 +164,10 @@ export async function PUT(request: NextRequest, context: Ctx) {
         total_amount = ${total_amount},
         prepayment = ${prepaymentNum},
         data = ${json}::jsonb,
-        partner_request_id = ${partner_request_id},
+        partner_request_id = CASE
+          WHEN ${partnerRequestExplicit}::boolean THEN ${partner_request_id}
+          ELSE partner_request_id
+        END,
         updated_at = NOW()
       WHERE id = ${id} AND user_id = ${user.id}
       RETURNING id, title, document_number, created_at, updated_at

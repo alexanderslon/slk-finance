@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Plus, Pencil, Trash2, Target, PiggyBank } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -27,6 +29,15 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
+/** Прогресс цели в процентах (0..100). Защищаемся от деления на ноль и NaN. */
+function goalProgress(goal: Goal): number {
+  const target = Number(goal.target_amount)
+  const current = Number(goal.current_amount)
+  if (!Number.isFinite(target) || target <= 0) return Number(goal.current_amount) > 0 ? 100 : 0
+  if (!Number.isFinite(current) || current <= 0) return 0
+  return Math.min(100, (current / target) * 100)
+}
+
 export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
   const router = useRouter()
   const [goals, setGoals] = useState(initialGoals)
@@ -35,6 +46,13 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null)
   const [editGoal, setEditGoal] = useState<Goal | null>(null)
   const [loading, setLoading] = useState(false)
+  const { confirm, dialog } = useConfirmDialog()
+
+  // После router.refresh() сервер отдаёт свежие initialGoals — синхронизируем
+  // локальный state. Без этого после удаления оставались устаревшие данные.
+  useEffect(() => {
+    setGoals(initialGoals)
+  }, [initialGoals])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -55,11 +73,17 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
         body: JSON.stringify(editGoal ? { ...data, id: editGoal.id } : data),
       })
 
-      if (res.ok) {
-        setIsOpen(false)
-        setEditGoal(null)
-        router.refresh()
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось сохранить цель')
+        return
       }
+      toast.success(editGoal ? 'Цель обновлена' : 'Цель добавлена')
+      setIsOpen(false)
+      setEditGoal(null)
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
@@ -72,6 +96,11 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
 
     const formData = new FormData(e.currentTarget)
     const amount = Number(formData.get('amount'))
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Укажите положительную сумму')
+      setLoading(false)
+      return
+    }
     const newAmount = Number(selectedGoal.current_amount) + amount
 
     try {
@@ -81,23 +110,44 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
         body: JSON.stringify({ id: selectedGoal.id, current_amount: newAmount }),
       })
 
-      if (res.ok) {
-        setAddMoneyOpen(false)
-        setSelectedGoal(null)
-        router.refresh()
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось пополнить')
+        return
       }
+      toast.success(`Пополнено: ${formatCurrency(amount)}`)
+      setAddMoneyOpen(false)
+      setSelectedGoal(null)
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm('Удалить цель?')) return
+  async function handleDelete(id: number, name?: string) {
+    const ok = await confirm({
+      title: 'Удалить цель?',
+      description: name
+        ? `«${name}» будет удалена безвозвратно.`
+        : 'Действие нельзя отменить.',
+      confirmLabel: 'Удалить',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
-    const res = await fetch(`/api/goals?id=${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setGoals(goals.filter((g) => g.id !== id))
+    try {
+      const res = await fetch(`/api/goals?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        toast.error('Не удалось удалить цель')
+        return
+      }
+      toast.success('Цель удалена')
+      setGoals((prev) => prev.filter((g) => g.id !== id))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
@@ -204,7 +254,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
       {/* Mobile-first: как «Долги» — полноширинные карточки-строки */}
       <div className="space-y-3 sm:hidden">
         {goals.map((goal) => {
-          const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100
+          const progress = goalProgress(goal)
           const isComplete = progress >= 100
           return (
             <div
@@ -245,7 +295,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(goal.id)}
+                    onClick={() => handleDelete(goal.id, goal.name)}
                     aria-label="Удалить"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -297,7 +347,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
       {/* sm+: десктоп — шире карточки, читаемые заголовки */}
       <div className="hidden gap-4 sm:grid sm:grid-cols-2 2xl:grid-cols-3">
         {goals.map((goal) => {
-          const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100
+          const progress = goalProgress(goal)
           const isComplete = progress >= 100
           return (
             <Card key={goal.id} className="rounded-3xl border-border bg-card">
@@ -324,7 +374,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(goal.id)}
+                    onClick={() => handleDelete(goal.id, goal.name)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -393,6 +443,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: Goal[] }) {
           </CardContent>
         </Card>
       )}
+      {dialog}
     </>
   )
 }

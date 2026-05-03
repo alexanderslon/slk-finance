@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -57,6 +58,10 @@ export function RequestsManager({
   const [approveWalletId, setApproveWalletId] = useState('')
   const [actionError, setActionError] = useState('')
 
+  useEffect(() => {
+    setRequests(initialRequests)
+  }, [initialRequests])
+
   const pendingCount = requests.filter((r) => r.status === 'pending').length
 
   useEffect(() => {
@@ -101,6 +106,7 @@ export function RequestsManager({
       })
 
       if (res.ok) {
+        toast.success(actionType === 'approve' ? 'Заявка одобрена' : 'Заявка отклонена')
         setSelectedRequest(null)
         setActionType(null)
         setApproveWalletId('')
@@ -115,9 +121,11 @@ export function RequestsManager({
           /* ignore */
         }
         setActionError(message)
+        toast.error(message)
       }
     } catch {
       setActionError('Ошибка сети. Проверьте подключение и попробуйте снова.')
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }

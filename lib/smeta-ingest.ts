@@ -25,15 +25,26 @@ export function isSmetaIngestAuthorized(request: NextRequest): boolean {
   return smetaSecretsEqual(token, secret)
 }
 
+/**
+ * Кому записать смету при внешнем ingest.
+ *
+ * Безопасность: env `SMETA_INGEST_USER_ID` имеет приоритет. Тело запроса
+ * (`created_by`) учитывается, ТОЛЬКО когда env не задан — нужно для миграций
+ * и dev-сценариев, когда секрет ещё не привязан к конкретному админу.
+ *
+ * Раньше тело перебивало env: при компрометации секрета можно было писать
+ * сметы под любым `user_id` из таблицы `users`. Закрыто.
+ */
 export function requireIngestUserId(bodyCreatedBy: unknown): number | null {
   const fromEnv = process.env.SMETA_INGEST_USER_ID?.trim()
   const parsedEnv = fromEnv ? Number(fromEnv) : NaN
+  if (Number.isFinite(parsedEnv) && parsedEnv > 0) return parsedEnv
+
   const parsedBody =
     typeof bodyCreatedBy === 'number' && Number.isFinite(bodyCreatedBy)
       ? bodyCreatedBy
       : typeof bodyCreatedBy === 'string' && bodyCreatedBy.trim()
         ? Number(bodyCreatedBy.trim())
         : NaN
-  const id = Number.isFinite(parsedBody) ? parsedBody : parsedEnv
-  return Number.isFinite(id) && id > 0 ? id : null
+  return Number.isFinite(parsedBody) && parsedBody > 0 ? parsedBody : null
 }

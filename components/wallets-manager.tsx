@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Wallet, Plus, Pencil, Trash2 } from 'lucide-react'
 import type { Wallet as WalletType } from '@/lib/db'
 import { sortWalletsWithPinnedBottom } from '@/lib/wallet-order'
@@ -40,7 +42,7 @@ function formatCurrency(amount: number, currency: string = 'RUB') {
 type WalletRowProps = {
   wallet: WalletType
   onEdit: (w: WalletType) => void
-  onDelete: (id: number) => void
+  onDelete: (id: number, name?: string) => void
 }
 
 function WalletActions({
@@ -66,7 +68,7 @@ function WalletActions({
         size="icon"
         type="button"
         className="h-11 w-11 touch-manipulation text-destructive hover:text-destructive sm:h-9 sm:w-9 md:h-8 md:w-8"
-        onClick={() => onDelete(wallet.id)}
+        onClick={() => onDelete(wallet.id, wallet.name)}
         aria-label="Удалить кошелёк"
       >
         <Trash2 className="h-4 w-4 shrink-0" />
@@ -81,6 +83,11 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
   const [isOpen, setIsOpen] = useState(false)
   const [editWallet, setEditWallet] = useState<WalletType | null>(null)
   const [loading, setLoading] = useState(false)
+  const { confirm, dialog } = useConfirmDialog()
+
+  useEffect(() => {
+    setWallets(initialWallets)
+  }, [initialWallets])
 
   const orderedWallets = useMemo(
     () => sortWalletsWithPinnedBottom(wallets),
@@ -105,29 +112,52 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
         body: JSON.stringify(editWallet ? { ...data, id: editWallet.id } : data),
       })
 
-      if (res.ok) {
-        setIsOpen(false)
-        setEditWallet(null)
-        router.refresh()
-        const updated = await res.json()
-        if (editWallet) {
-          setWallets(wallets.map((w) => (w.id === editWallet.id ? updated : w)))
-        } else {
-          setWallets([updated, ...wallets])
-        }
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось сохранить кошелёк')
+        return
       }
+      const updated = (await res.json().catch(() => null)) as WalletType | null
+      toast.success(editWallet ? 'Кошелёк обновлён' : 'Кошелёк добавлен')
+      setIsOpen(false)
+      const wasEdit = editWallet
+      setEditWallet(null)
+      if (updated) {
+        setWallets((prev) =>
+          wasEdit ? prev.map((w) => (w.id === wasEdit.id ? updated : w)) : [updated, ...prev],
+        )
+      }
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm('Удалить кошелек?')) return
+  async function handleDelete(id: number, name?: string) {
+    const ok = await confirm({
+      title: 'Удалить кошелёк?',
+      description: name
+        ? `«${name}» будет удалён. Связанные операции останутся в истории, но потеряют ссылку на кошелёк.`
+        : 'Действие нельзя отменить.',
+      confirmLabel: 'Удалить',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
-    const res = await fetch(`/api/wallets?id=${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setWallets(wallets.filter((w) => w.id !== id))
+    try {
+      const res = await fetch(`/api/wallets?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось удалить кошелёк')
+        return
+      }
+      toast.success('Кошелёк удалён')
+      setWallets((prev) => prev.filter((w) => w.id !== id))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
@@ -303,6 +333,7 @@ export function WalletsManager({ initialWallets }: { initialWallets: WalletType[
           </div>
         </>
       )}
+      {dialog}
     </div>
   )
 }

@@ -7,6 +7,7 @@ import {
   SITE_NAME,
 } from '@/lib/branding'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -85,6 +86,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster richColors closeButton position="top-right" />
           <Analytics />
         </ThemeProvider>
       </body>

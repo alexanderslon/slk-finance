@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Plus, Pencil, Trash2, Check, CreditCard } from 'lucide-react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -41,6 +43,11 @@ export function DebtsManager({ initialDebts }: { initialDebts: Debt[] }) {
   const [isOpen, setIsOpen] = useState(false)
   const [editDebt, setEditDebt] = useState<Debt | null>(null)
   const [loading, setLoading] = useState(false)
+  const { confirm, dialog } = useConfirmDialog()
+
+  useEffect(() => {
+    setDebts(initialDebts)
+  }, [initialDebts])
 
   const givenDebts = debts.filter((d) => d.type === 'given' && !d.is_paid)
   const takenDebts = debts.filter((d) => d.type === 'taken' && !d.is_paid)
@@ -69,36 +76,64 @@ export function DebtsManager({ initialDebts }: { initialDebts: Debt[] }) {
         body: JSON.stringify(editDebt ? { ...data, id: editDebt.id } : data),
       })
 
-      if (res.ok) {
-        setIsOpen(false)
-        setEditDebt(null)
-        router.refresh()
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось сохранить долг')
+        return
       }
+      toast.success(editDebt ? 'Долг обновлён' : 'Долг добавлен')
+      setIsOpen(false)
+      setEditDebt(null)
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
   }
 
   async function handleMarkPaid(id: number) {
-    const res = await fetch('/api/debts', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, is_paid: true }),
-    })
+    try {
+      const res = await fetch('/api/debts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_paid: true }),
+      })
 
-    if (res.ok) {
-      setDebts(debts.map((d) => (d.id === id ? { ...d, is_paid: true } : d)))
+      if (!res.ok) {
+        toast.error('Не удалось отметить как оплаченный')
+        return
+      }
+      toast.success('Долг закрыт')
+      setDebts((prev) => prev.map((d) => (d.id === id ? { ...d, is_paid: true } : d)))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm('Удалить долг?')) return
+  async function handleDelete(id: number, debtorName?: string) {
+    const ok = await confirm({
+      title: 'Удалить долг?',
+      description: debtorName
+        ? `Запись по «${debtorName}» будет удалена безвозвратно.`
+        : 'Действие нельзя отменить.',
+      confirmLabel: 'Удалить',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
-    const res = await fetch(`/api/debts?id=${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setDebts(debts.filter((d) => d.id !== id))
+    try {
+      const res = await fetch(`/api/debts?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        toast.error('Не удалось удалить долг')
+        return
+      }
+      toast.success('Долг удалён')
+      setDebts((prev) => prev.filter((d) => d.id !== id))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
@@ -156,7 +191,7 @@ export function DebtsManager({ initialDebts }: { initialDebts: Debt[] }) {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleDelete(debt.id)}
+                onClick={() => handleDelete(debt.id, debt.debtor_name)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -300,6 +335,7 @@ export function DebtsManager({ initialDebts }: { initialDebts: Debt[] }) {
           </CardContent>
         </Card>
       )}
+      {dialog}
     </>
   )
 }

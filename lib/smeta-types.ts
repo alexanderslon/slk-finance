@@ -134,7 +134,7 @@ export function normalizeSmetaStage(v: unknown): SmetaStage {
   return 1
 }
 
-/** Нормализация списка активных этапов: непустой подмножество {1..6}, порядок фиксированный. */
+/** Нормализация сроков: оставляем только строки по ключам 1–4. */
 export function normalizeStageDeadlines(raw: unknown): SmetaStageDeadlines {
   if (!raw || typeof raw !== 'object') return {}
   const o = raw as Record<string, unknown>
@@ -146,6 +146,7 @@ export function normalizeStageDeadlines(raw: unknown): SmetaStageDeadlines {
   return out
 }
 
+/** Нормализация списка активных этапов: непустое подмножество {1..6}, порядок фиксированный. */
 export function normalizeEnabledStages(raw: unknown): SmetaStage[] {
   if (!raw || !Array.isArray(raw)) return [...SMETA_MAIN_STAGES]
   const picked = new Set<SmetaStage>()
@@ -155,6 +156,23 @@ export function normalizeEnabledStages(raw: unknown): SmetaStage[] {
   }
   if (picked.size === 0) return [1]
   return SMETA_STAGE_ORDER.filter((s) => picked.has(s))
+}
+
+/**
+ * Подбор `enabledStages` для legacy-смет, у которых поля нет.
+ *
+ * Раньше всегда возвращали `[1..4]`, и старые сметы со строками этапов 5/6
+ * («Доп. работы», «Материалы») открывались с пустыми блоками — пользователь
+ * думал, что данные пропали. Теперь смотрим на реальные этапы строк и
+ * включаем все, которые там есть.
+ */
+export function inferEnabledStagesFromRows(rows: readonly RowData[]): SmetaStage[] {
+  const present = new Set<SmetaStage>()
+  for (const r of rows) {
+    present.add(normalizeSmetaStage(r.stage))
+  }
+  for (const st of SMETA_MAIN_STAGES) present.add(st)
+  return SMETA_STAGE_ORDER.filter((s) => present.has(s))
 }
 
 export function firstEnabledStage(stages: readonly SmetaStage[]): SmetaStage {

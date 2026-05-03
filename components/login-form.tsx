@@ -41,14 +41,17 @@ export function LoginForm() {
         body: JSON.stringify({ username, password, type }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
-      if (data.error) {
-        setError(data.error)
-      } else {
-        router.push(type === 'admin' ? '/admin' : '/partner')
-        router.refresh()
+      // Раньше при `!res.ok` без поля `error` форма всё равно редиректила —
+      // пользователь попадал в защищённый раздел и тут же выкидывался обратно.
+      if (!res.ok || data.error) {
+        setError(typeof data.error === 'string' ? data.error : 'Не удалось войти')
+        return
       }
+
+      router.push(type === 'admin' ? '/admin' : '/partner')
+      router.refresh()
     } catch {
       setError('Ошибка сервера')
     } finally {
@@ -81,14 +84,15 @@ export function LoginForm() {
         body: JSON.stringify({ name, phone, password }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
-      if (data.error) {
-        setError(data.error)
-      } else {
-        setSuccess('Регистрация успешна! Ожидайте одобрения админа.')
-        setShowRegister(false)
+      if (!res.ok || data.error) {
+        setError(typeof data.error === 'string' ? data.error : 'Не удалось зарегистрироваться')
+        return
       }
+
+      setSuccess('Регистрация успешна! Ожидайте одобрения админа.')
+      setShowRegister(false)
     } catch {
       setError('Ошибка сервера')
     } finally {

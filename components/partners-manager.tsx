@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Table,
   TableBody,
@@ -49,6 +51,15 @@ export function PartnersManager({
   const [editPartner, setEditPartner] = useState<Partner | null>(null)
   const [editUser, setEditUser] = useState<PartnerUser | null>(null)
   const [loading, setLoading] = useState(false)
+  const { confirm, dialog } = useConfirmDialog()
+
+  useEffect(() => {
+    setPartners(initialPartners)
+  }, [initialPartners])
+
+  useEffect(() => {
+    setPartnerUsers(initialPartnerUsers)
+  }, [initialPartnerUsers])
 
   async function handlePartnerSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -68,11 +79,17 @@ export function PartnersManager({
         body: JSON.stringify(editPartner ? { ...data, id: editPartner.id } : data),
       })
 
-      if (res.ok) {
-        setIsPartnerOpen(false)
-        setEditPartner(null)
-        router.refresh()
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось сохранить партнёра')
+        return
       }
+      toast.success(editPartner ? 'Партнёр обновлён' : 'Партнёр добавлен')
+      setIsPartnerOpen(false)
+      setEditPartner(null)
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
@@ -96,48 +113,90 @@ export function PartnersManager({
         body: JSON.stringify(editUser ? { ...data, id: editUser.id } : data),
       })
 
-      if (res.ok) {
-        setIsUserOpen(false)
-        setEditUser(null)
-        router.refresh()
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось сохранить аккаунт')
+        return
       }
+      toast.success(editUser ? 'Аккаунт обновлён' : 'Аккаунт создан')
+      setIsUserOpen(false)
+      setEditUser(null)
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handlePartnerDelete(id: number) {
-    if (!confirm('Удалить партнёра? Все связанные аккаунты также будут удалены.')) return
+  async function handlePartnerDelete(id: number, name?: string) {
+    const ok = await confirm({
+      title: 'Удалить партнёра?',
+      description: name
+        ? `«${name}» и все его аккаунты будут удалены безвозвратно.`
+        : 'Все связанные аккаунты также будут удалены.',
+      confirmLabel: 'Удалить',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
-    const res = await fetch(`/api/partners?id=${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setPartners(partners.filter((p) => p.id !== id))
-      setPartnerUsers(partnerUsers.filter((u) => u.partner_id !== id))
+    try {
+      const res = await fetch(`/api/partners?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось удалить партнёра')
+        return
+      }
+      toast.success('Партнёр удалён')
+      setPartners((prev) => prev.filter((p) => p.id !== id))
+      setPartnerUsers((prev) => prev.filter((u) => u.partner_id !== id))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
-  async function handleUserDelete(id: number) {
-    if (!confirm('Удалить аккаунт партнёра?')) return
+  async function handleUserDelete(id: number, username?: string) {
+    const ok = await confirm({
+      title: 'Удалить аккаунт партнёра?',
+      description: username ? `Логин «${username}» больше не сможет войти.` : undefined,
+      confirmLabel: 'Удалить',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
-    const res = await fetch(`/api/partner-users?id=${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setPartnerUsers(partnerUsers.filter((u) => u.id !== id))
+    try {
+      const res = await fetch(`/api/partner-users?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        toast.error('Не удалось удалить аккаунт')
+        return
+      }
+      toast.success('Аккаунт удалён')
+      setPartnerUsers((prev) => prev.filter((u) => u.id !== id))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
   async function handleToggleActive(user: PartnerUser) {
-    const res = await fetch('/api/partner-users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: user.id, is_active: !user.is_active }),
-    })
+    try {
+      const res = await fetch('/api/partner-users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, is_active: !user.is_active }),
+      })
 
-    if (res.ok) {
-      setPartnerUsers(partnerUsers.map((u) => 
-        u.id === user.id ? { ...u, is_active: !u.is_active } : u
-      ))
+      if (!res.ok) {
+        toast.error('Не удалось переключить статус')
+        return
+      }
+      setPartnerUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, is_active: !u.is_active } : u)),
+      )
+      toast.success(user.is_active ? 'Аккаунт заблокирован' : 'Аккаунт активирован')
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
@@ -252,7 +311,7 @@ export function PartnersManager({
                               variant="ghost"
                               size="icon"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => handlePartnerDelete(partner.id)}
+                              onClick={() => handlePartnerDelete(partner.id, partner.name)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -304,7 +363,7 @@ export function PartnersManager({
                                   variant="ghost"
                                   size="icon"
                                   className="text-destructive hover:text-destructive"
-                                  onClick={() => handlePartnerDelete(partner.id)}
+                                  onClick={() => handlePartnerDelete(partner.id, partner.name)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -425,7 +484,7 @@ export function PartnersManager({
                             variant="ghost"
                             size="icon"
                             className="text-destructive hover:text-destructive"
-                            onClick={() => handleUserDelete(user.id)}
+                            onClick={() => handleUserDelete(user.id, user.username)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -489,7 +548,7 @@ export function PartnersManager({
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive hover:text-destructive"
-                                onClick={() => handleUserDelete(user.id)}
+                                onClick={() => handleUserDelete(user.id, user.username)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -505,6 +564,7 @@ export function PartnersManager({
           </CardContent>
         </Card>
       </TabsContent>
+      {dialog}
     </Tabs>
   )
 }

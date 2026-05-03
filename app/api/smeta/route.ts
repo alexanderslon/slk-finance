@@ -72,13 +72,8 @@ export async function POST(request: NextRequest) {
     const external = isSmetaIngestAuthorized(request)
 
     if (external) {
-      if (!process.env.SMETA_INGEST_SECRET?.trim()) {
-        const res = NextResponse.json(
-          { success: false, error: 'Внешнее сохранение смет отключено' },
-          { status: 503 },
-        )
-        return applySmetaCors(request, res)
-      }
+      // (`isSmetaIngestAuthorized` уже отсёк отсутствие SMETA_INGEST_SECRET
+      // и неверный токен — на эту ветку попадаем только при валидном секрете.)
 
       const document_number = typeof body.document_number === 'string' ? body.document_number.trim() : ''
       const data = body.data

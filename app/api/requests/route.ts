@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
+import { txMulti } from '@/lib/db-tx'
 import { getCurrentUser } from '@/lib/auth'
 import { estimatePartnerRequestBonus } from '@/lib/partner-bonus'
 import { notifyNewPartnerRequest } from '@/lib/telegram'
@@ -194,39 +195,65 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id, status, admin_comment, wallet_id, actual_work_volume } = await request.json()
+    let body: Record<string, unknown>
+    try {
+      body = (await request.json()) as Record<string, unknown>
+    } catch {
+      return NextResponse.json({ error: 'Некорректный JSON' }, { status: 400 })
+    }
+
+    const { id, status, admin_comment, wallet_id, actual_work_volume } = body as {
+      id?: number | string
+      status?: string
+      admin_comment?: string | null
+      wallet_id?: number | string | null
+      actual_work_volume?: string | null
+    }
+
+    const idNum = Number(id)
+    if (!Number.isFinite(idNum) || idNum <= 0) {
+      return NextResponse.json({ error: 'Некорректный id' }, { status: 400 })
+    }
+    if (status !== 'pending' && status !== 'approved' && status !== 'rejected') {
+      return NextResponse.json({ error: 'Некорректный статус' }, { status: 400 })
+    }
+
     const actualVol =
       typeof actual_work_volume === 'string' && actual_work_volume.trim() !== ''
         ? actual_work_volume.trim()
         : null
+    const adminCommentVal =
+      typeof admin_comment === 'string' && admin_comment.trim() !== '' ? admin_comment : null
 
     const before = await sql`
       SELECT pr.*, c.name AS category_name
       FROM partner_requests pr
       JOIN categories c ON c.id = pr.category_id
-      WHERE pr.id = ${id}
+      WHERE pr.id = ${idNum}
     `
     const prev = before[0]
-    if (!prev) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!prev) return NextResponse.json({ error: 'Заявка не найдена' }, { status: 404 })
 
     const approvedTotal =
       status === 'approved'
         ? estimatePartnerRequestBonus(prev.square_meters, prev.category_name)
         : Number(prev.amount)
 
-    // Update request status (сумма заявки = итоговый бонус при одобрении: база + м²)
-    let result: Awaited<ReturnType<typeof sql>>
+    // Колонка actual_work_volume может отсутствовать в старых миграциях — пробуем сначала
+    // полный апдейт, при ошибке схемы — без неё. Атомарность не нужна (SELECT + один UPDATE).
+    let updatedRow: Record<string, unknown> | undefined
     try {
-      result = await sql`
+      const r = await sql`
         UPDATE partner_requests
         SET status = ${status},
-            admin_comment = ${admin_comment},
+            admin_comment = ${adminCommentVal},
             actual_work_volume = ${actualVol},
             updated_at = NOW(),
             amount = ${approvedTotal}
-        WHERE id = ${id}
+        WHERE id = ${idNum}
         RETURNING *
       `
+      updatedRow = r[0]
     } catch (updErr) {
       const msg = String((updErr as Error)?.message || updErr)
       const missingActualVol =
@@ -234,18 +261,22 @@ export async function PUT(request: NextRequest) {
         /partner_requests|column/i.test(msg)
       if (!missingActualVol) throw updErr
       console.warn('[requests PUT] actual_work_volume column missing; updating without it:', msg)
-      result = await sql`
+      const r = await sql`
         UPDATE partner_requests
         SET status = ${status},
-            admin_comment = ${admin_comment},
+            admin_comment = ${adminCommentVal},
             updated_at = NOW(),
             amount = ${approvedTotal}
-        WHERE id = ${id}
+        WHERE id = ${idNum}
         RETURNING *
       `
+      updatedRow = r[0]
     }
 
-    // If approved, create expense transaction
+    if (!updatedRow) {
+      return NextResponse.json({ error: 'Заявка не найдена' }, { status: 404 })
+    }
+
     let bonusAwarded = 0
     const walletIdNum = Number(wallet_id)
     const walletOk =
@@ -255,30 +286,42 @@ export async function PUT(request: NextRequest) {
       walletIdNum > 0
 
     if (walletOk) {
-      const req = result[0]
+      const req = updatedRow as Record<string, unknown>
+      const reqAmount = Number(req.amount)
+      const reqCategoryId = Number(req.category_id)
+      const reqPartnerId = Number(req.partner_id)
+      const shouldAwardBonus = prev.status !== 'approved'
 
-      // Create expense transaction
-      await sql`
-        INSERT INTO transactions (wallet_id, category_id, type, amount, description, partner_id)
-        VALUES (${walletIdNum}, ${req.category_id}, 'expense', ${req.amount}, 
-                ${'Заявка от партнёра'}, ${req.partner_id})
-      `
+      /*
+       * Атомарно: создаём расход, двигаем баланс кошелька и (при первом одобрении)
+       * начисляем бонус партнёру. Раньше это были 3 разных запроса, и при сбое
+       * посередине в БД оставалось расхождение «заявка одобрена / денег нет / бонус есть».
+       */
+      await txMulti((tx) => {
+        const queries: PromiseLike<unknown[]>[] = [
+          tx`
+            INSERT INTO transactions (wallet_id, category_id, type, amount, description, partner_id)
+            VALUES (${walletIdNum}, ${reqCategoryId}, 'expense', ${reqAmount},
+                    ${'Заявка от партнёра'}, ${reqPartnerId})
+          `,
+          tx`UPDATE wallets SET balance = balance - ${reqAmount} WHERE id = ${walletIdNum}`,
+        ]
+        if (shouldAwardBonus) {
+          queries.push(
+            tx`
+              UPDATE partners
+              SET bonus_balance = COALESCE(bonus_balance, 0) + ${reqAmount}
+              WHERE id = ${reqPartnerId}
+            `,
+          )
+        }
+        return queries
+      })
 
-      // Update wallet balance
-      await sql`UPDATE wallets SET balance = balance - ${req.amount} WHERE id = ${walletIdNum}`
-
-      // Начислить партнёру тот же итог, что и в заявке (по правилам estimatePartnerRequestBonus), только при первом одобрении
-      if (prev.status !== 'approved') {
-        bonusAwarded = Number(req.amount)
-        await sql`
-          UPDATE partners
-          SET bonus_balance = COALESCE(bonus_balance, 0) + ${bonusAwarded}
-          WHERE id = ${req.partner_id}
-        `
-      }
+      if (shouldAwardBonus) bonusAwarded = reqAmount
     }
 
-    return NextResponse.json({ ...result[0], bonusAwarded })
+    return NextResponse.json({ ...updatedRow, bonusAwarded })
   } catch (error) {
     console.error('Error updating request:', error)
     const detail =

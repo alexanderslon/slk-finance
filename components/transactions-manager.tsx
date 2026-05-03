@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Table,
   TableBody,
@@ -75,6 +77,7 @@ export function TransactionsManager({
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null)
   const [loading, setLoading] = useState(false)
   const [monthFilter, setMonthFilter] = useState<string>('all')
+  const { confirm, dialog } = useConfirmDialog()
 
   useEffect(() => {
     setTransactions(initialTransactions)
@@ -133,23 +136,43 @@ export function TransactionsManager({
         body: JSON.stringify(editTransaction ? { ...data, id: editTransaction.id } : data),
       })
 
-      if (res.ok) {
-        setIsOpen(false)
-        setEditTransaction(null)
-        router.refresh()
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось сохранить операцию')
+        return
       }
+      toast.success(editTransaction ? 'Операция обновлена' : `${type === 'income' ? 'Доход' : 'Расход'} добавлен`)
+      setIsOpen(false)
+      setEditTransaction(null)
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
   }
 
   async function handleDelete(id: number) {
-    if (!confirm('Удалить операцию?')) return
+    const ok = await confirm({
+      title: 'Удалить операцию?',
+      description: 'Баланс кошелька и история работника откатятся к состоянию до операции.',
+      confirmLabel: 'Удалить',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
-    const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setTransactions(transactions.filter((t) => t.id !== id))
+    try {
+      const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось удалить операцию')
+        return
+      }
+      toast.success('Операция удалена')
+      setTransactions((prev) => prev.filter((t) => t.id !== id))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
@@ -461,6 +484,7 @@ export function TransactionsManager({
           )}
         </CardContent>
       </Card>
+      {dialog}
     </>
   )
 }

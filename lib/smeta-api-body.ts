@@ -21,7 +21,13 @@ export type SmetaFinanceTotals = {
   toPay: number
 }
 
-/** Тело для POST/PUT /api/smeta (расширенный формат + колонки для списков/отчётов). */
+/**
+ * Тело для POST/PUT /api/smeta (расширенный формат + колонки для списков/отчётов).
+ *
+ * `partnerRequestId` опциональный: если передан — поле уйдёт в БД и обновит/выставит
+ * связь «заявка → смета». Если не передан — на PUT поле НЕ ТРОГАЕТСЯ (см. сервер),
+ * это нужно, чтобы обычный «Сохранить» из калькулятора не разрывал привязку.
+ */
 export function buildSmetaPersistBody(
   header: HeaderData,
   rows: RowData[],
@@ -32,10 +38,11 @@ export function buildSmetaPersistBody(
   enabledStages: SmetaStage[],
   totals: SmetaFinanceTotals,
   stageDeadlines: SmetaStageDeadlines,
+  partnerRequestId?: number | null,
 ): Record<string, unknown> {
   const sq = header.squareMeters.replace(/\s/g, '').replace(',', '.')
   const square_meters = parseFloat(sq)
-  return {
+  const body: Record<string, unknown> = {
     title: [header.documentNumber?.trim(), header.customerName?.trim()].filter(Boolean).join(' · ') || 'Смета',
     document_number: header.documentNumber ?? '',
     customer_name: header.customerName ?? '',
@@ -56,4 +63,8 @@ export function buildSmetaPersistBody(
       finance: totals,
     } satisfies DocState & { finance: SmetaFinanceTotals },
   }
+  if (partnerRequestId !== undefined) {
+    body.partner_request_id = partnerRequestId
+  }
+  return body
 }

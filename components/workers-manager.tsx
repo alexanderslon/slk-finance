@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Table,
   TableBody,
@@ -38,6 +40,11 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
   const [isOpen, setIsOpen] = useState(false)
   const [editWorker, setEditWorker] = useState<Worker | null>(null)
   const [loading, setLoading] = useState(false)
+  const { confirm, dialog } = useConfirmDialog()
+
+  useEffect(() => {
+    setWorkers(initialWorkers)
+  }, [initialWorkers])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -58,23 +65,44 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
         body: JSON.stringify(editWorker ? { ...data, id: editWorker.id } : data),
       })
 
-      if (res.ok) {
-        setIsOpen(false)
-        setEditWorker(null)
-        router.refresh()
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(err.error || 'Не удалось сохранить работника')
+        return
       }
+      toast.success(editWorker ? 'Работник обновлён' : 'Работник добавлен')
+      setIsOpen(false)
+      setEditWorker(null)
+      router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm('Удалить работника?')) return
+  async function handleDelete(id: number, name?: string) {
+    const ok = await confirm({
+      title: 'Удалить работника?',
+      description: name
+        ? `«${name}» будет удалён вместе с историей выплат.`
+        : 'Действие нельзя отменить.',
+      confirmLabel: 'Удалить',
+      variant: 'destructive',
+    })
+    if (!ok) return
 
-    const res = await fetch(`/api/workers?id=${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setWorkers(workers.filter((w) => w.id !== id))
+    try {
+      const res = await fetch(`/api/workers?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        toast.error('Не удалось удалить работника')
+        return
+      }
+      toast.success('Работник удалён')
+      setWorkers((prev) => prev.filter((w) => w.id !== id))
       router.refresh()
+    } catch {
+      toast.error('Ошибка сети')
     }
   }
 
@@ -190,7 +218,7 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                           variant="ghost"
                           size="icon"
                           className="h-9 w-9 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(worker.id)}
+                          onClick={() => handleDelete(worker.id, worker.name)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -251,7 +279,7 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                               variant="ghost"
                               size="icon"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(worker.id)}
+                              onClick={() => handleDelete(worker.id, worker.name)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -266,6 +294,7 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
           )}
         </CardContent>
       </Card>
+      {dialog}
     </>
   )
 }
