@@ -186,7 +186,7 @@
 
   @page {
     size: A4 portrait;
-    margin: 12mm;
+    margin: 15mm;
   }
 
   /*
@@ -212,11 +212,16 @@
     visibility: visible !important;
   }
 
+  /*
+   * Безопасный внутренний отступ. Браузер уже даёт 15 мм через @page, но если
+   * пользователь в диалоге печати выберет «Без полей» — содержимое всё равно
+   * не уйдёт под физический край листа благодаря этому padding.
+   */
   html.smeta-printing body [data-print-root] {
     position: absolute !important;
     inset: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 5mm !important;
     width: auto !important;
     max-width: none !important;
     background: #ffffff !important;
@@ -224,6 +229,7 @@
     border-radius: 0 !important;
     box-shadow: none !important;
     overflow: visible !important;
+    box-sizing: border-box !important;
   }
 }
 

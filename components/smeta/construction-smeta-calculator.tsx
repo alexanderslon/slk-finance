@@ -67,8 +67,10 @@ function safeFilename(s: string): string {
  */
 const A4_PAGE_WIDTH_CSS_PX = 794
 const A4_PAGE_HEIGHT_CSS_PX = 1123
-/** Поля под стандартный принтер (совпадают с `@page { margin }` в globals.css). */
-const A4_PAGE_MARGIN_MM = 12
+/** Безопасное поле под стандартный принтер (совпадает с `@page { margin }` и
+ * с `html.smeta-printing [data-print-root]` в globals.css). 15 мм — Microsoft Word
+ * «Narrow», влезает абсолютно во все принтеры (lazer/струйный/мобильный). */
+const A4_PAGE_MARGIN_MM = 15
 /** 200 DPI — оптимальный компромисс между качеством печати и весом файла. */
 const PRINT_TARGET_DPI = 200
 const PRINT_PIXEL_RATIO = PRINT_TARGET_DPI / 96
