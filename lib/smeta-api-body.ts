@@ -11,6 +11,12 @@ export type SmetaFinanceTotals = {
   worksSubtotal: number
   overheadAmount: number
   overheadPercent: number
+  /** Сумма для клиента до скидки: позиции + накладные. */
+  totalUpperBeforeDiscount: number
+  customerDiscountPercent: number
+  customerDiscountSpecified: boolean
+  customerDiscountAmount: number
+  /** Итог для клиента после скидки. */
   totalUpperSum: number
   totalWorkerSum: number
   prepaymentN: number
@@ -35,6 +41,7 @@ export function buildSmetaPersistBody(
   laborer: string,
   otkat: string,
   overheadPercent: string,
+  customerDiscountPercent: string,
   enabledStages: SmetaStage[],
   totals: SmetaFinanceTotals,
   stageDeadlines: SmetaStageDeadlines,
@@ -58,6 +65,7 @@ export function buildSmetaPersistBody(
       laborer,
       otkat,
       overheadPercent,
+      customerDiscountPercent,
       enabledStages,
       stageDeadlines,
       finance: totals,

@@ -404,6 +404,7 @@ export function ConstructionSmetaCalculator() {
   const [laborer, setLaborer] = useState<string>('0')
   const [otkat, setOtkat] = useState<string>('5000')
   const [overheadPercent, setOverheadPercent] = useState<string>('0')
+  const [customerDiscountPercent, setCustomerDiscountPercent] = useState<string>('0')
   const [enabledStages, setEnabledStages] = useState<SmetaStage[]>(() => [...SMETA_MAIN_STAGES])
   const [stageDeadlines, setStageDeadlines] = useState(() => normalizeStageDeadlines(undefined))
   const nextIdRef = useRef(nextRowIdFromRows(SMETA_INITIAL_ROWS))
@@ -445,6 +446,8 @@ export function ConstructionSmetaCalculator() {
     if (typeof doc.otkat === 'string') setOtkat(doc.otkat)
     if (typeof doc.overheadPercent === 'string') setOverheadPercent(doc.overheadPercent)
     else setOverheadPercent('0')
+    if (typeof doc.customerDiscountPercent === 'string') setCustomerDiscountPercent(doc.customerDiscountPercent)
+    else setCustomerDiscountPercent('0')
 
     // Legacy-сметы могут не иметь enabledStages — раньше дефолтили на 1–4 и
     // теряли строки этапов 5/6. Теперь дефолт — этапы, реально присутствующие в строках.
@@ -540,7 +543,12 @@ export function ConstructionSmetaCalculator() {
     const overheadPct = Math.max(0, toNumber(overheadPercent))
     const overheadSpecified = overheadPercent.trim() !== '' && overheadPct > 0
     const overheadAmount = overheadSpecified ? worksSubtotal * (overheadPct / 100) : 0
-    const totalUpperSum = worksSubtotal + overheadAmount
+    const totalUpperBeforeDiscount = worksSubtotal + overheadAmount
+    const discountPctRaw = Math.max(0, toNumber(customerDiscountPercent))
+    const discountPct = Math.min(100, discountPctRaw)
+    const discountSpecified = customerDiscountPercent.trim() !== '' && discountPct > 0
+    const customerDiscountAmount = discountSpecified ? totalUpperBeforeDiscount * (discountPct / 100) : 0
+    const totalUpperSum = totalUpperBeforeDiscount - customerDiscountAmount
     const totalWorkerSum = visibleRows.reduce((s, r) => s + toNumber(r.quantity) * toNumber(r.workerPrice), 0)
     const prepaymentN = toNumber(prepayment)
     const laborerN = toNumber(laborer)
@@ -553,6 +561,10 @@ export function ConstructionSmetaCalculator() {
       overheadAmount,
       overheadPercent: overheadPct,
       overheadSpecified,
+      totalUpperBeforeDiscount,
+      customerDiscountPercent: discountPct,
+      customerDiscountSpecified: discountSpecified,
+      customerDiscountAmount,
       totalUpperSum,
       totalWorkerSum,
       prepaymentN,
@@ -562,7 +574,7 @@ export function ConstructionSmetaCalculator() {
       myIncome,
       toPay,
     }
-  }, [visibleRows, prepayment, laborer, otkat, overheadPercent])
+  }, [visibleRows, prepayment, laborer, otkat, overheadPercent, customerDiscountPercent])
 
   const totalsByStage = useMemo(() => {
     const m: Record<SmetaStage, { upper: number; worker: number }> = {
@@ -593,6 +605,7 @@ export function ConstructionSmetaCalculator() {
         laborer,
         otkat,
         overheadPercent,
+        customerDiscountPercent,
         enabledStages,
         totals,
         stageDeadlines,
@@ -645,6 +658,7 @@ export function ConstructionSmetaCalculator() {
     laborer,
     otkat,
     overheadPercent,
+    customerDiscountPercent,
     prepayment,
     refreshList,
     rows,
@@ -669,6 +683,7 @@ export function ConstructionSmetaCalculator() {
         laborer,
         otkat,
         overheadPercent,
+        customerDiscountPercent,
         enabledStages,
         totals,
         stageDeadlines,
@@ -707,6 +722,7 @@ export function ConstructionSmetaCalculator() {
     laborer,
     otkat,
     overheadPercent,
+    customerDiscountPercent,
     prepayment,
     refreshList,
     rows,
@@ -724,6 +740,7 @@ export function ConstructionSmetaCalculator() {
     setLaborer('')
     setOtkat('')
     setOverheadPercent('')
+    setCustomerDiscountPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
     setStageDeadlines({})
     setApiError('')
@@ -739,6 +756,7 @@ export function ConstructionSmetaCalculator() {
     setLaborer('')
     setOtkat('')
     setOverheadPercent('')
+    setCustomerDiscountPercent('')
     setEnabledStages([...SMETA_MAIN_STAGES])
     setStageDeadlines({})
     setApiError('')
@@ -881,6 +899,9 @@ export function ConstructionSmetaCalculator() {
       if (typeof parsed?.laborer === "string") setLaborer(parsed.laborer);
       if (typeof parsed?.otkat === "string") setOtkat(parsed.otkat);
       if (typeof parsed?.overheadPercent === "string") setOverheadPercent(parsed.overheadPercent);
+      if (typeof parsed?.customerDiscountPercent === "string")
+        setCustomerDiscountPercent(parsed.customerDiscountPercent)
+      else setCustomerDiscountPercent("0")
       setEnabledStages(normalizeEnabledStages(parsed?.enabledStages))
       setStageDeadlines(normalizeStageDeadlines(parsed?.stageDeadlines))
     } catch {
@@ -1000,9 +1021,23 @@ export function ConstructionSmetaCalculator() {
               <span className="font-semibold tabular-nums">{fmt(totals.overheadAmount)} ₽</span>
             </div>
           ) : null}
+          {totals.customerDiscountSpecified ? (
+            <>
+              <div className="flex justify-between text-gray-700">
+                <span>Итого до скидки:</span>
+                <span className="font-semibold tabular-nums">{fmt(totals.totalUpperBeforeDiscount)} ₽</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Скидка для заказчика ({fmt(totals.customerDiscountPercent)}%):</span>
+                <span className="font-semibold tabular-nums">−{fmt(totals.customerDiscountAmount)} ₽</span>
+              </div>
+            </>
+          ) : null}
           <div className="flex justify-end pt-2">
             <div className="text-right">
-              <div className="text-sm text-gray-600">Всего по работам (с накладными):</div>
+              <div className="text-sm text-gray-600">
+                {totals.customerDiscountSpecified ? 'Итого к оплате заказчиком:' : 'Всего по работам (с накладными):'}
+              </div>
               <div className="text-2xl font-extrabold text-gray-900 tabular-nums">{fmt(totals.totalUpperSum)} ₽</div>
             </div>
           </div>
@@ -1034,6 +1069,7 @@ export function ConstructionSmetaCalculator() {
       laborer,
       otkat,
       overheadPercent,
+      customerDiscountPercent,
       enabledStages,
       stageDeadlines,
     }
@@ -1078,6 +1114,7 @@ export function ConstructionSmetaCalculator() {
     laborer,
     otkat,
     overheadPercent,
+    customerDiscountPercent,
     pathname,
     prepayment,
     rows,
@@ -1529,9 +1566,53 @@ export function ConstructionSmetaCalculator() {
                 )}
               </tr>
             )}
+            {totals.customerDiscountSpecified && (
+              <>
+                <tr className="bg-blue-50 font-semibold">
+                  <td colSpan={printMode ? 4 : 8} className={`border border-gray-300 ${cellPad} text-right text-blue-950`}>
+                    Итого до скидки (с накладными):
+                  </td>
+                  {printMode ? (
+                    <>
+                      <td className={`border border-gray-300 ${cellPad} text-center text-zinc-400`}>—</td>
+                      <td className={`border border-gray-300 ${cellPad} text-right text-blue-900`}>
+                        {fmt(totals.totalUpperBeforeDiscount)}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className={`border border-gray-300 ${cellPad} text-right text-blue-900`}>
+                        {fmt(totals.totalUpperBeforeDiscount)}
+                      </td>
+                      <td className={`border border-gray-300 ${cellPad} no-print`} />
+                    </>
+                  )}
+                </tr>
+                <tr className="bg-orange-50/80 font-semibold">
+                  <td colSpan={printMode ? 4 : 8} className={`border border-gray-300 ${cellPad} text-right text-zinc-800`}>
+                    Скидка для заказчика ({fmt(totals.customerDiscountPercent)}%):
+                  </td>
+                  {printMode ? (
+                    <>
+                      <td className={`border border-gray-300 ${cellPad} text-center text-zinc-400`}>—</td>
+                      <td className={`border border-gray-300 ${cellPad} text-right text-orange-900`}>
+                        −{fmt(totals.customerDiscountAmount)}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className={`border border-gray-300 ${cellPad} text-right text-orange-900`}>
+                        −{fmt(totals.customerDiscountAmount)}
+                      </td>
+                      <td className={`border border-gray-300 ${cellPad} no-print`} />
+                    </>
+                  )}
+                </tr>
+              </>
+            )}
             <tr className="bg-blue-100 font-bold">
               <td colSpan={printMode ? 4 : 8} className={`border border-gray-300 ${cellPad} text-right text-blue-950`}>
-                Всего (с накладными):
+                {totals.customerDiscountSpecified ? 'Итого к оплате:' : 'Всего (с накладными):'}
               </td>
               {printMode ? (
                 <>
@@ -2046,6 +2127,32 @@ export function ConstructionSmetaCalculator() {
               </span>
             </div>
           </div>
+          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-zinc-100 bg-zinc-50/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-zinc-800">Скидка для заказчика</p>
+              <p className="text-xs text-zinc-500">
+                Процент от суммы «позиции + накладные». Уменьшает итог к оплате и сумму прописью в печати.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                inputMode="decimal"
+                className="w-24 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-right font-semibold text-zinc-900 tabular-nums outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400"
+                value={customerDiscountPercent}
+                onChange={(e) => setCustomerDiscountPercent(e.target.value)}
+                aria-label="Процент скидки для заказчика"
+              />
+              <span className="text-sm font-medium text-zinc-600">%</span>
+              <span className="text-sm text-zinc-600">
+                −{' '}
+                <span className="font-semibold tabular-nums text-orange-900">
+                  {fmt(totals.customerDiscountAmount)}
+                </span>{' '}
+                ₽
+              </span>
+            </div>
+          </div>
           <div className="-mx-0 min-w-0 overflow-x-auto overscroll-x-contain sm:mx-0">
             {renderTable(false)}
           </div>
@@ -2144,10 +2251,29 @@ export function ConstructionSmetaCalculator() {
                   <span className="font-semibold tabular-nums">{fmt(totals.overheadAmount)} ₽</span>
                 </div>
               ) : null}
-              <div className="flex justify-between text-blue-100 text-sm border-t border-blue-500/50 pt-1">
-                <span>Итого (с накладными):</span>
-                <span className="font-semibold tabular-nums">{fmt(totals.totalUpperSum)} ₽</span>
-              </div>
+              {totals.customerDiscountSpecified ? (
+                <>
+                  <div className="flex justify-between text-blue-100 text-sm border-t border-blue-500/50 pt-1">
+                    <span>Итого (с накладными), до скидки:</span>
+                    <span className="font-semibold tabular-nums">{fmt(totals.totalUpperBeforeDiscount)} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-blue-100 text-sm">
+                    <span>Скидка ({fmt(totals.customerDiscountPercent)}%):</span>
+                    <span className="font-semibold tabular-nums">
+                      −{fmt(totals.customerDiscountAmount)} ₽
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-blue-100 text-sm border-t border-blue-500/40 pt-1">
+                    <span>Клиент платит:</span>
+                    <span className="font-semibold tabular-nums">{fmt(totals.totalUpperSum)} ₽</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between text-blue-100 text-sm border-t border-blue-500/50 pt-1">
+                  <span>Итого (с накладными):</span>
+                  <span className="font-semibold tabular-nums">{fmt(totals.totalUpperSum)} ₽</span>
+                </div>
+              )}
               <div className="flex justify-between text-blue-100 text-sm">
                 <span>Расходы:</span>
                 <span className="font-semibold tabular-nums">{fmt(totals.totalExpenses)} ₽</span>
