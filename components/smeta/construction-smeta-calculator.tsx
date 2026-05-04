@@ -424,8 +424,7 @@ export function ConstructionSmetaCalculator() {
   const [estimateId, setEstimateId] = useState<number | null>(null)
   const [listSelect, setListSelect] = useState<string>('')
   const [smetaVariant, setSmetaVariant] = useState<SmetaVariantId>(() => 'construction')
-  const [variantReplaceOpen, setVariantReplaceOpen] = useState(false)
-  const [pendingVariant, setPendingVariant] = useState<SmetaVariantId | null>(null)
+  const [templateReplaceOpen, setTemplateReplaceOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteSavedOpen, setDeleteSavedOpen] = useState(false)
@@ -790,33 +789,25 @@ export function ConstructionSmetaCalculator() {
     })
   }, [])
 
-  const applyVariantTemplate = useCallback((next: SmetaVariantId) => {
-    const tpl = smetaTemplateRows(next)
-    setSmetaVariant(next)
+  const applyCurrentVariantTemplate = useCallback(() => {
+    const tpl = smetaTemplateRows(smetaVariant)
     setRows(tpl.map((r) => ({ ...r })))
     nextIdRef.current = nextRowIdFromRows(tpl)
     setEnabledStages(inferEnabledStagesFromRows(tpl))
-  }, [])
+  }, [smetaVariant])
 
-  const commitVariantFromSelect = useCallback(
-    (next: SmetaVariantId) => {
-      if (next === smetaVariant) return
-      if (rowsLookEditedForVariantSwitch(rows)) {
-        setPendingVariant(next)
-        setVariantReplaceOpen(true)
-      } else {
-        applyVariantTemplate(next)
-      }
-    },
-    [applyVariantTemplate, rows, smetaVariant],
-  )
+  const requestReplaceRowsWithTemplate = useCallback(() => {
+    if (rowsLookEditedForVariantSwitch(rows)) {
+      setTemplateReplaceOpen(true)
+    } else {
+      applyCurrentVariantTemplate()
+    }
+  }, [applyCurrentVariantTemplate, rows])
 
-  const confirmVariantReplace = useCallback(() => {
-    if (pendingVariant == null) return
-    applyVariantTemplate(pendingVariant)
-    setPendingVariant(null)
-    setVariantReplaceOpen(false)
-  }, [applyVariantTemplate, pendingVariant])
+  const confirmReplaceRowsWithTemplate = useCallback(() => {
+    applyCurrentVariantTemplate()
+    setTemplateReplaceOpen(false)
+  }, [applyCurrentVariantTemplate])
 
   const handleLoadSelected = useCallback(async () => {
     const id = Number(listSelect)
@@ -1860,22 +1851,25 @@ export function ConstructionSmetaCalculator() {
       </AlertDialog>
 
       <AlertDialog
-        open={variantReplaceOpen}
-        onOpenChange={(open) => {
-          setVariantReplaceOpen(open)
-          if (!open) setPendingVariant(null)
-        }}
+        open={templateReplaceOpen}
+        onOpenChange={setTemplateReplaceOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Сменить вариант сметы?</AlertDialogTitle>
+            <AlertDialogTitle>Подставить типовые строки?</AlertDialogTitle>
             <AlertDialogDescription>
-              В таблице уже есть данные. Подставить типовые позиции для нового варианта? Текущие строки будут заменены.
+              Текущие позиции в таблице будут заменены шаблоном для выбранного варианта сметы (
+              <span className="font-medium text-foreground">
+                {SMETA_VARIANT_OPTIONS.find((o) => o.id === smetaVariant)?.label ?? ''}
+              </span>
+              ).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmVariantReplace}>Подставить шаблон</AlertDialogAction>
+            <AlertDialogAction onClick={confirmReplaceRowsWithTemplate}>
+              Заменить строки
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -2101,7 +2095,7 @@ export function ConstructionSmetaCalculator() {
               </label>
               <Select
                 value={smetaVariant}
-                onValueChange={(v) => commitVariantFromSelect(normalizeSmetaVariant(v))}
+                onValueChange={(v) => setSmetaVariant(normalizeSmetaVariant(v))}
               >
                 <SelectTrigger className="w-full border-zinc-300 bg-white text-zinc-900">
                   <SelectValue placeholder="Выберите вариант" />
@@ -2115,9 +2109,21 @@ export function ConstructionSmetaCalculator() {
                 </SelectContent>
               </Select>
               <p className="mt-2 text-xs text-zinc-500">
-                От заголовка печати и от того, какие строки подставляет кнопка «Новая смета». Смена варианта при
-                заполненной таблице спросит подтверждение.
+                Меняет заголовок печати и сохранённый тип сметы; таблица позиций не трогается — можно переназначить уже
+                заполненную смету (например с «ремонта» на «душевые ограждения») и сохранить.
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-zinc-800"
+                  onClick={requestReplaceRowsWithTemplate}
+                >
+                  Подставить типовые строки этого варианта
+                </Button>
+                <span className="text-xs text-zinc-500">Кнопка «Новая смета» по-прежнему создаёт документ с шаблоном.</span>
+              </div>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {headerField("documentNumber", "№ документа", "СМ-001")}
