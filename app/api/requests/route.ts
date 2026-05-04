@@ -4,18 +4,7 @@ import { txMulti } from '@/lib/db-tx'
 import { getCurrentUser } from '@/lib/auth'
 import { estimatePartnerRequestBonus } from '@/lib/partner-bonus'
 import { notifyNewPartnerRequest } from '@/lib/telegram'
-
-async function ensureExpenseCategory(name: string): Promise<number> {
-  const rows = await sql`SELECT id FROM categories WHERE name = ${name} AND type = 'expense' LIMIT 1`
-  if (rows[0]?.id) return rows[0].id
-
-  const inserted = await sql`
-    INSERT INTO categories (name, type)
-    VALUES (${name}, 'expense')
-    RETURNING id
-  `
-  return inserted[0].id
-}
+import { findOrCreateCategory } from '@/lib/categories'
 
 export async function GET(request: NextRequest) {
   try {
@@ -103,7 +92,7 @@ export async function POST(request: NextRequest) {
         ? String(category_name).trim().slice(0, 255)
         : 'Сантехника'
 
-    const categoryId = await ensureExpenseCategory(categoryName)
+    const categoryId = await findOrCreateCategory(categoryName, 'expense')
 
     const wVol = typeof work_volume === 'string' && work_volume.trim() ? work_volume.trim() : null
     const wRec =

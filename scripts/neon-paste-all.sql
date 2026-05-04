@@ -139,23 +139,47 @@ INSERT INTO wallets (name, balance, currency) VALUES
 ('ВТБ', 0, 'RUB')
 ON CONFLICT DO NOTHING;
 
--- Default categories
+-- Уникальность пары (name, type) — без неё ON CONFLICT ниже не сработает
+-- и категории при повторном запуске сидинга задвоятся.
+CREATE UNIQUE INDEX IF NOT EXISTS categories_name_type_key ON categories (name, type);
+
+-- Default categories. Имена выровнены с lib/categories.ts: на стороне расходов
+-- выплаты работнику явно помечены, чтобы не путаться с одноимёнными доходными.
 INSERT INTO categories (name, type) VALUES
 ('Зарплата', 'income'),
+('Аванс', 'income'),
+('Премия', 'income'),
 ('Фриланс', 'income'),
+('Подработка', 'income'),
 ('Инвестиции', 'income'),
+('Дивиденды', 'income'),
 ('Возврат', 'income'),
+('Бонус', 'income'),
+('Подарок', 'income'),
+('Аренда', 'income'),
+('Продажа', 'income'),
+('Крипта', 'income'),
 ('Другое', 'income'),
 ('Материалы', 'expense'),
-('ЗП', 'expense'),
-('Аванс', 'expense'),
-('Премия', 'expense'),
+('Зарплата работникам', 'expense'),
+('Аванс работникам', 'expense'),
+('Премия работникам', 'expense'),
+('Подрядчики', 'expense'),
 ('Откат', 'expense'),
-('Еда', 'expense'),
+('Инструмент', 'expense'),
+('Аренда', 'expense'),
 ('Транспорт', 'expense'),
-('Связь', 'expense'),
+('Топливо', 'expense'),
+('Доставка', 'expense'),
+('Связь и интернет', 'expense'),
+('Реклама', 'expense'),
+('Налоги и сборы', 'expense'),
+('Еда', 'expense'),
+('Хозтовары', 'expense'),
+('Квартира и ЖКХ', 'expense'),
+('Крипта', 'expense'),
 ('Другое', 'expense')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (name, type) DO NOTHING;
 
 -- Sample workers
 INSERT INTO workers (name, phone, position) VALUES
