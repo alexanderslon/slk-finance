@@ -19,7 +19,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -47,6 +49,11 @@ import { sumInWordsRu } from '@/lib/sum-in-words-ru'
 import { toast } from 'sonner'
 import { Copy, Trash2, Download } from 'lucide-react'
 import { downloadCsv, todayStampForFilename, toCsv } from '@/lib/csv'
+import {
+  buildMonthSelectOptions,
+  transactionMonthKey,
+  transactionMonthTitleRu,
+} from '@/lib/transaction-dates'
 
 const PREVIEW_STORAGE_PREFIX = "smeta_doc:";
 /** Сколько часов держим ключи предпросмотра в localStorage до автоочистки. */
@@ -363,6 +370,26 @@ type EstimateListItem = {
   created_at: string
 }
 
+function currentCalendarMonthKey(): string {
+  const n = new Date()
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Месяц по дате создания сметы: стабильные «ящики» архива при поиске. */
+function pickDefaultSavedListMonth(list: readonly EstimateListItem[]): string {
+  if (list.length === 0) return currentCalendarMonthKey()
+  let latest = ''
+  for (const e of list) {
+    const k = transactionMonthKey(e.created_at)
+    if (k > latest) latest = k
+  }
+  return latest || currentCalendarMonthKey()
+}
+
+function compareEstimateListNewestFirst(a: EstimateListItem, b: EstimateListItem): number {
+  return String(b.updated_at).localeCompare(String(a.updated_at))
+}
+
 export function ConstructionSmetaCalculator() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -396,6 +423,9 @@ export function ConstructionSmetaCalculator() {
   const [pendingDeleteSavedLabel, setPendingDeleteSavedLabel] = useState<string>('')
   const [loadingList, setLoadingList] = useState(true)
   const [apiError, setApiError] = useState('')
+  /** Показать записи созданные в месяце (по БД created_at); «все» — выпадающий список с группировкой по месяцам. */
+  const [savedMonthFilter, setSavedMonthFilter] = useState<'all' | string>('all')
+  const syncedDefaultSavedMonthRef = useRef(false)
 
   const applyDocState = useCallback((doc: DocState) => {
     if (doc.header) setHeader({ ...doc.header })
@@ -434,7 +464,12 @@ export function ConstructionSmetaCalculator() {
         setApiError(typeof err.error === 'string' ? err.error : 'Не удалось загрузить список')
         return
       }
-      setEstimateList(Array.isArray(raw) ? (raw as EstimateListItem[]) : [])
+      const next = Array.isArray(raw) ? (raw as EstimateListItem[]) : []
+      setEstimateList(next)
+      if (!syncedDefaultSavedMonthRef.current && next.length > 0) {
+        syncedDefaultSavedMonthRef.current = true
+        setSavedMonthFilter(pickDefaultSavedListMonth(next))
+      }
       setApiError('')
     } catch {
       setApiError('Ошибка сети при загрузке смет')
@@ -457,6 +492,41 @@ export function ConstructionSmetaCalculator() {
       documentNumber: nextDocumentNumberFromList(estimateList),
     }
   }, [estimateList])
+
+  const savedListMonthSelectOptions = useMemo(
+    () => buildMonthSelectOptions(estimateList),
+    [estimateList],
+  )
+
+  /** Сметы попадающие в фильтр «месяц создания». */
+  const estimatesInSavedMonthPick = useMemo(() => {
+    if (savedMonthFilter === 'all') return estimateList
+    return estimateList.filter((e) => transactionMonthKey(e.created_at) === savedMonthFilter)
+  }, [estimateList, savedMonthFilter])
+
+  /** То, что видно в селекте: отфильтрованное + текущее открытое из другого месяца сверху. */
+  const estimateSelectCandidates = useMemo(() => {
+    let base = [...estimatesInSavedMonthPick].sort(compareEstimateListNewestFirst)
+    if (estimateId != null && !base.some((e) => e.id === estimateId)) {
+      const cur = estimateList.find((e) => e.id === estimateId)
+      if (cur) base = [cur, ...base]
+    }
+    return base
+  }, [estimatesInSavedMonthPick, estimateId, estimateList])
+
+  /** Группы по месяцу — только когда в фильтре «все месяцы». */
+  const groupedDescendingForSelect = useMemo(() => {
+    if (savedMonthFilter !== 'all') return null
+    const map = new Map<string, EstimateListItem[]>()
+    for (const e of estimateSelectCandidates) {
+      const k = transactionMonthKey(e.created_at)
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(e)
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([k, arr]) => [k, [...arr].sort(compareEstimateListNewestFirst)] as const)
+  }, [savedMonthFilter, estimateSelectCandidates])
 
   const visibleRows = useMemo(() => {
     const set = new Set(enabledStages)
@@ -722,11 +792,12 @@ export function ConstructionSmetaCalculator() {
   }, [applyDocState, listSelect])
 
   const handleExportListCsv = useCallback(() => {
-    if (estimateList.length === 0) {
-      toast.info('Список смет пуст — экспортировать нечего')
+    const rows = estimatesInSavedMonthPick
+    if (rows.length === 0) {
+      toast.info('Нет смет для экспорта по текущему месяцу')
       return
     }
-    const csv = toCsv(estimateList, [
+    const csv = toCsv(rows, [
       {
         key: 'document_number',
         label: 'Номер документа',
@@ -749,8 +820,12 @@ export function ConstructionSmetaCalculator() {
       { key: 'updated_at', label: 'Обновлена', map: (r) => r.updated_at ?? '' },
     ])
     downloadCsv(`smetas-${todayStampForFilename()}.csv`, csv)
-    toast.success(`Экспортировано ${estimateList.length} смет`)
-  }, [estimateList])
+    toast.success(
+      savedMonthFilter === 'all'
+        ? `Экспортировано ${rows.length} смет (весь список)`
+        : `Экспортировано ${rows.length} смет за ${transactionMonthTitleRu(savedMonthFilter)}`,
+    )
+  }, [estimatesInSavedMonthPick, savedMonthFilter])
 
   const requestDeleteSaved = useCallback(() => {
     const id = Number(listSelect)
@@ -1669,28 +1744,93 @@ export function ConstructionSmetaCalculator() {
             <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-stretch lg:justify-between">
               <div className="min-w-0 space-y-2 lg:flex-1">
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Сохранённые сметы</p>
+                <Select value={savedMonthFilter} onValueChange={setSavedMonthFilter} disabled={loadingList}>
+                  <SelectTrigger
+                    aria-label="Месяц создания сметы"
+                    className="w-full border-zinc-300 bg-white text-zinc-900 sm:max-w-md [&_span]:text-zinc-900"
+                  >
+                    <SelectValue placeholder="Месяц…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все месяцы · по группам в списке</SelectItem>
+                    {savedListMonthSelectOptions.map((ym) => (
+                      <SelectItem key={ym} value={ym}>
+                        {transactionMonthTitleRu(ym)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {estimateList.length > 0 ? (
+                  <p className="text-xs text-zinc-500">
+                    Показываются сметы, созданные в выбранном месяце:{' '}
+                    <span className="tabular-nums text-zinc-700">
+                      {estimatesInSavedMonthPick.length} из {estimateList.length}
+                    </span>
+                    {savedMonthFilter !== 'all' ? (
+                      <span className="text-zinc-600"> ({transactionMonthTitleRu(savedMonthFilter)})</span>
+                    ) : null}
+                  </p>
+                ) : null}
+                {estimateId != null &&
+                !loadingList &&
+                !estimatesInSavedMonthPick.some((e) => e.id === estimateId) ? (
+                  <p className="text-xs text-amber-800">
+                    Открытая смета из другого месяца временно добавлена в выпадающий список, чтобы сохранился выбор.
+                  </p>
+                ) : null}
                 <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                   <Select
                     value={listSelect || undefined}
                     onValueChange={setListSelect}
-                    disabled={loadingList}
+                    disabled={loadingList || estimateSelectCandidates.length === 0}
                   >
                     <SelectTrigger className="w-full border-zinc-300 bg-white text-zinc-900 sm:max-w-md [&_span]:text-zinc-900">
-                      <SelectValue placeholder={loadingList ? 'Загрузка…' : 'Выберите смету'} />
+                      <SelectValue
+                        placeholder={
+                          loadingList
+                            ? 'Загрузка…'
+                            : estimateSelectCandidates.length === 0
+                              ? 'Нет смет по фильтру'
+                              : 'Выберите смету'
+                        }
+                      />
                     </SelectTrigger>
-                    <SelectContent>
-                      {estimateList.map((e) => {
-                        const docLabel = e.document_number?.trim()
-                          ? `№ ${e.document_number.trim()}`
-                          : `#${e.id}`
-                        return (
-                          <SelectItem key={e.id} value={String(e.id)}>
-                            <span className="tabular-nums">
-                              {docLabel} · {fmtMoneyOrDash(e.total_amount)}
-                            </span>
-                          </SelectItem>
-                        )
-                      })}
+                    <SelectContent className="max-h-[min(70vh,26rem)]">
+                      {savedMonthFilter === 'all' && groupedDescendingForSelect
+                        ? groupedDescendingForSelect.map(([monthKey, items]) => (
+                            <SelectGroup key={monthKey}>
+                              <SelectLabel className="capitalize">
+                                {transactionMonthTitleRu(monthKey)}{' · '}
+                                <span className="tabular-nums">{items.length}</span>
+                              </SelectLabel>
+                              {items.map((e) => {
+                                const docLabel = e.document_number?.trim()
+                                  ? `№ ${e.document_number.trim()}`
+                                  : `#${e.id}`
+                                return (
+                                  <SelectItem key={e.id} value={String(e.id)}>
+                                    <span className="tabular-nums">
+                                      {docLabel} · {fmtMoneyOrDash(e.total_amount)}
+                                      {e.title.trim() ? ` · ${e.title.trim()}` : ''}
+                                    </span>
+                                  </SelectItem>
+                                )
+                              })}
+                            </SelectGroup>
+                          ))
+                        : estimateSelectCandidates.map((e) => {
+                            const docLabel = e.document_number?.trim()
+                              ? `№ ${e.document_number.trim()}`
+                              : `#${e.id}`
+                            return (
+                              <SelectItem key={e.id} value={String(e.id)}>
+                                <span className="tabular-nums">
+                                  {docLabel} · {fmtMoneyOrDash(e.total_amount)}
+                                  {e.title.trim() ? ` · ${e.title.trim()}` : ''}
+                                </span>
+                              </SelectItem>
+                            )
+                          })}
                     </SelectContent>
                   </Select>
                   <Button
@@ -1718,8 +1858,14 @@ export function ConstructionSmetaCalculator() {
                     variant="outline"
                     className="w-full shrink-0 sm:w-auto"
                     onClick={handleExportListCsv}
-                    disabled={estimateList.length === 0}
-                    title="Скачать список смет в CSV (для Excel/Numbers)"
+                    disabled={estimateList.length === 0 || estimatesInSavedMonthPick.length === 0}
+                    title={
+                      estimateList.length === 0 || estimatesInSavedMonthPick.length === 0
+                        ? 'Нечего экспортировать'
+                        : savedMonthFilter === 'all'
+                          ? 'Все сохранённые сметы — CSV для Excel / Numbers'
+                          : `Только месяц: ${transactionMonthTitleRu(savedMonthFilter)}`
+                    }
                   >
                     <Download className="mr-1.5 h-4 w-4" aria-hidden />
                     CSV
