@@ -21,6 +21,9 @@ export const MATERIALS_STAGE = 6 as const satisfies SmetaStage
 /** Порядок этапов в таблице и сортировке строк. */
 export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5, 6]
 
+/** Вариант сметы — заголовок печати и набор типовых позиций при «Новая смета». */
+export type SmetaVariantId = 'construction' | 'shower-enclosure' | 'cctv'
+
 export interface RowData {
   id: number
   /** Этап работ (разбивка сметы). */
@@ -57,6 +60,8 @@ export interface DocState {
   enabledStages?: SmetaStage[]
   /** Сроки выполнения только для этапов 1–4. */
   stageDeadlines?: SmetaStageDeadlines
+  /** Вариант сметы (заголовок, шаблон строк). В старых сохранениях нет — считаем «строительно-ремонтные». */
+  smetaVariant?: SmetaVariantId
 }
 
 function row(

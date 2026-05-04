@@ -4,6 +4,7 @@ import type {
   RowData,
   SmetaStage,
   SmetaStageDeadlines,
+  SmetaVariantId,
 } from '@/lib/smeta-types'
 
 export type SmetaFinanceTotals = {
@@ -42,6 +43,7 @@ export function buildSmetaPersistBody(
   otkat: string,
   overheadPercent: string,
   customerDiscountPercent: string,
+  smetaVariant: SmetaVariantId,
   enabledStages: SmetaStage[],
   totals: SmetaFinanceTotals,
   stageDeadlines: SmetaStageDeadlines,
@@ -66,6 +68,7 @@ export function buildSmetaPersistBody(
       otkat,
       overheadPercent,
       customerDiscountPercent,
+      smetaVariant,
       enabledStages,
       stageDeadlines,
       finance: totals,

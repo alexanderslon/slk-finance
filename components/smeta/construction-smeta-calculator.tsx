@@ -25,12 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { DocState, HeaderData, RowData, SmetaMainStageKey, SmetaStage } from '@/lib/smeta-types'
+import type { DocState, HeaderData, RowData, SmetaMainStageKey, SmetaStage, SmetaVariantId } from '@/lib/smeta-types'
 import {
   ADDITIONAL_WORK_STAGE,
   MATERIALS_STAGE,
   SMETA_EMPTY_ROWS,
-  SMETA_INITIAL_ROWS,
   SMETA_MAIN_STAGES,
   SMETA_STAGE_ORDER,
   blankHeader,
@@ -44,6 +43,13 @@ import {
   stageLabel,
   stageSubtotalLabel,
 } from '@/lib/smeta-types'
+import {
+  SMETA_VARIANT_OPTIONS,
+  normalizeSmetaVariant,
+  rowsLookEditedForVariantSwitch,
+  smetaTemplateRows,
+  smetaVariantPrintTitle,
+} from '@/lib/smeta-variants'
 import { buildSmetaPersistBody } from '@/lib/smeta-api-body'
 import { sumInWordsRu } from '@/lib/sum-in-words-ru'
 import { toast } from 'sonner'
@@ -399,7 +405,7 @@ export function ConstructionSmetaCalculator() {
 
   const [header, setHeader] = useState<HeaderData>(() => defaultHeader())
 
-  const [rows, setRows] = useState<RowData[]>(() => SMETA_INITIAL_ROWS.map((r) => ({ ...r })))
+  const [rows, setRows] = useState<RowData[]>(() => smetaTemplateRows('construction'))
   const [prepayment, setPrepayment] = useState<string>('5000')
   const [laborer, setLaborer] = useState<string>('0')
   const [otkat, setOtkat] = useState<string>('5000')
@@ -407,7 +413,7 @@ export function ConstructionSmetaCalculator() {
   const [customerDiscountPercent, setCustomerDiscountPercent] = useState<string>('0')
   const [enabledStages, setEnabledStages] = useState<SmetaStage[]>(() => [...SMETA_MAIN_STAGES])
   const [stageDeadlines, setStageDeadlines] = useState(() => normalizeStageDeadlines(undefined))
-  const nextIdRef = useRef(nextRowIdFromRows(SMETA_INITIAL_ROWS))
+  const nextIdRef = useRef(nextRowIdFromRows(smetaTemplateRows('construction')))
   const draggingRowIdRef = useRef<number | null>(null)
   const printContentRef = useRef<HTMLDivElement | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -417,6 +423,9 @@ export function ConstructionSmetaCalculator() {
   const [estimateList, setEstimateList] = useState<EstimateListItem[]>([])
   const [estimateId, setEstimateId] = useState<number | null>(null)
   const [listSelect, setListSelect] = useState<string>('')
+  const [smetaVariant, setSmetaVariant] = useState<SmetaVariantId>(() => 'construction')
+  const [variantReplaceOpen, setVariantReplaceOpen] = useState(false)
+  const [pendingVariant, setPendingVariant] = useState<SmetaVariantId | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteSavedOpen, setDeleteSavedOpen] = useState(false)
@@ -456,6 +465,7 @@ export function ConstructionSmetaCalculator() {
       : inferEnabledStagesFromRows(incomingRows)
     setEnabledStages(enabled)
     setStageDeadlines(normalizeStageDeadlines(doc.stageDeadlines))
+    setSmetaVariant(normalizeSmetaVariant(doc.smetaVariant))
   }, [])
 
   const refreshList = useCallback(async () => {
@@ -606,6 +616,7 @@ export function ConstructionSmetaCalculator() {
         otkat,
         overheadPercent,
         customerDiscountPercent,
+        smetaVariant,
         enabledStages,
         totals,
         stageDeadlines,
@@ -659,6 +670,7 @@ export function ConstructionSmetaCalculator() {
     otkat,
     overheadPercent,
     customerDiscountPercent,
+    smetaVariant,
     prepayment,
     refreshList,
     rows,
@@ -684,6 +696,7 @@ export function ConstructionSmetaCalculator() {
         otkat,
         overheadPercent,
         customerDiscountPercent,
+        smetaVariant,
         enabledStages,
         totals,
         stageDeadlines,
@@ -723,6 +736,7 @@ export function ConstructionSmetaCalculator() {
     otkat,
     overheadPercent,
     customerDiscountPercent,
+    smetaVariant,
     prepayment,
     refreshList,
     rows,
@@ -731,20 +745,21 @@ export function ConstructionSmetaCalculator() {
   ])
 
   const handleNew = useCallback(() => {
+    const tpl = smetaTemplateRows(smetaVariant)
     setEstimateId(null)
     setListSelect('')
     setHeader(buildNewHeader())
-    setRows(SMETA_EMPTY_ROWS.map((r) => ({ ...r })))
-    nextIdRef.current = nextRowIdFromRows(SMETA_EMPTY_ROWS)
+    setRows(tpl.map((r) => ({ ...r })))
+    nextIdRef.current = nextRowIdFromRows(tpl)
     setPrepayment('')
     setLaborer('')
     setOtkat('')
     setOverheadPercent('')
     setCustomerDiscountPercent('')
-    setEnabledStages([...SMETA_MAIN_STAGES])
+    setEnabledStages(inferEnabledStagesFromRows(tpl))
     setStageDeadlines({})
     setApiError('')
-  }, [buildNewHeader])
+  }, [buildNewHeader, smetaVariant])
 
   const handleNewEmpty = useCallback(() => {
     setEstimateId(null)
@@ -774,6 +789,34 @@ export function ConstructionSmetaCalculator() {
       return prev.filter((x) => x !== st)
     })
   }, [])
+
+  const applyVariantTemplate = useCallback((next: SmetaVariantId) => {
+    const tpl = smetaTemplateRows(next)
+    setSmetaVariant(next)
+    setRows(tpl.map((r) => ({ ...r })))
+    nextIdRef.current = nextRowIdFromRows(tpl)
+    setEnabledStages(inferEnabledStagesFromRows(tpl))
+  }, [])
+
+  const commitVariantFromSelect = useCallback(
+    (next: SmetaVariantId) => {
+      if (next === smetaVariant) return
+      if (rowsLookEditedForVariantSwitch(rows)) {
+        setPendingVariant(next)
+        setVariantReplaceOpen(true)
+      } else {
+        applyVariantTemplate(next)
+      }
+    },
+    [applyVariantTemplate, rows, smetaVariant],
+  )
+
+  const confirmVariantReplace = useCallback(() => {
+    if (pendingVariant == null) return
+    applyVariantTemplate(pendingVariant)
+    setPendingVariant(null)
+    setVariantReplaceOpen(false)
+  }, [applyVariantTemplate, pendingVariant])
 
   const handleLoadSelected = useCallback(async () => {
     const id = Number(listSelect)
@@ -904,6 +947,7 @@ export function ConstructionSmetaCalculator() {
       else setCustomerDiscountPercent("0")
       setEnabledStages(normalizeEnabledStages(parsed?.enabledStages))
       setStageDeadlines(normalizeStageDeadlines(parsed?.stageDeadlines))
+      setSmetaVariant(normalizeSmetaVariant(parsed?.smetaVariant))
     } catch {
       // ignore malformed storage
     }
@@ -989,7 +1033,7 @@ export function ConstructionSmetaCalculator() {
       <div className="print-header mb-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">СМЕТА НА СТРОИТЕЛЬНО-РЕМОНТНЫЕ РАБОТЫ</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{smetaVariantPrintTitle(smetaVariant)}</h1>
             <p className="text-sm text-gray-600 mt-1">
               Документ № {header.documentNumber} от {header.date}
             </p>
@@ -1070,6 +1114,7 @@ export function ConstructionSmetaCalculator() {
       otkat,
       overheadPercent,
       customerDiscountPercent,
+      smetaVariant,
       enabledStages,
       stageDeadlines,
     }
@@ -1115,6 +1160,7 @@ export function ConstructionSmetaCalculator() {
     otkat,
     overheadPercent,
     customerDiscountPercent,
+    smetaVariant,
     pathname,
     prepayment,
     rows,
@@ -1813,6 +1859,27 @@ export function ConstructionSmetaCalculator() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog
+        open={variantReplaceOpen}
+        onOpenChange={(open) => {
+          setVariantReplaceOpen(open)
+          if (!open) setPendingVariant(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Сменить вариант сметы?</AlertDialogTitle>
+            <AlertDialogDescription>
+              В таблице уже есть данные. Подставить типовые позиции для нового варианта? Текущие строки будут заменены.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmVariantReplace}>Подставить шаблон</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div data-print-root className="print-only">
         {renderPrintDocument()}
       </div>
@@ -2006,7 +2073,10 @@ export function ConstructionSmetaCalculator() {
               <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">
                 📋 Смета на работы
               </h1>
-              <p className="mt-1 text-sm text-zinc-600 sm:text-base">Управление позициями и расчёт стоимости</p>
+              <p className="mt-1 text-sm font-medium text-zinc-700 sm:text-base">
+                {SMETA_VARIANT_OPTIONS.find((o) => o.id === smetaVariant)?.label ?? ''}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500 sm:text-sm">Управление позициями и расчёт стоимости</p>
             </div>
             <div className="flex shrink-0">
               <button
@@ -2025,6 +2095,30 @@ export function ConstructionSmetaCalculator() {
               <span className="w-2 h-2 rounded-full bg-blue-500"></span>
               Реквизиты документа
             </h2>
+            <div className="mb-4 max-w-xl">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Вариант сметы
+              </label>
+              <Select
+                value={smetaVariant}
+                onValueChange={(v) => commitVariantFromSelect(normalizeSmetaVariant(v))}
+              >
+                <SelectTrigger className="w-full border-zinc-300 bg-white text-zinc-900">
+                  <SelectValue placeholder="Выберите вариант" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SMETA_VARIANT_OPTIONS.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-2 text-xs text-zinc-500">
+                От заголовка печати и от того, какие строки подставляет кнопка «Новая смета». Смена варианта при
+                заполненной таблице спросит подтверждение.
+              </p>
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {headerField("documentNumber", "№ документа", "СМ-001")}
               {headerField("date", "Дата", "2024-01-01")}
