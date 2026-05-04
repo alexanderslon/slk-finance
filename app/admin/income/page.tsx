@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db'
 import { TransactionsManager } from '@/components/transactions-manager'
+import { AdminTopStats } from '@/components/admin-top-stats'
 import { ensureDefaultIncomeCategories } from '@/lib/categories'
 
 async function getData() {
@@ -34,6 +35,8 @@ export default async function IncomePage() {
         <h1 className="text-xl font-bold leading-tight sm:text-2xl">Доходы</h1>
         <p className="text-sm text-muted-foreground sm:text-base">Управление доходами</p>
       </div>
+
+      <AdminTopStats />
 
       <TransactionsManager
         type="income"

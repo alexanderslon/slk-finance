@@ -57,6 +57,13 @@ type Props = {
    * без отдельного селекта месяца.
    */
   onMonthChange?: (month: string) => void
+  /**
+   * Компактный режим: тот же набор KPI-карточек и селектор месяца, но без
+   * жирного h1 «Дашборд». Используется как верхний виджет на «Кошельках»,
+   * «Доходах», «Расходах» — у этих страниц свой заголовок, дублировать
+   * «Дашборд» там не надо.
+   */
+  compact?: boolean
 }
 
 export function DashboardStats({
@@ -69,6 +76,7 @@ export function DashboardStats({
   initialIncome,
   initialExpenses,
   onMonthChange: onMonthChangeProp,
+  compact = false,
 }: Props) {
   const [month, setMonth] = useState(initialMonth)
   const [income, setIncome] = useState(initialIncome)
@@ -104,17 +112,33 @@ export function DashboardStats({
 
   return (
     <div className="space-y-2 max-lg:space-y-2 sm:space-y-4 lg:space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
-            Дашборд
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            Общая статистика финансов
+      <div
+        className={cn(
+          'flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4',
+          compact && 'sm:items-center',
+        )}
+      >
+        {compact ? (
+          // Компактный режим: только подпись «Сводка · <месяц>» — без большого h1.
+          // Страницы «Кошельки/Доходы/Расходы» имеют собственные заголовки,
+          // двойной h1 ломает структуру страницы и ритм чтения.
+          <p className="min-w-0 flex-1 text-sm text-muted-foreground sm:text-base">
+            Сводка
             <span className="text-muted-foreground/80"> · </span>
             <span className="text-foreground/90">{transactionMonthTitleRu(month)}</span>
           </p>
-        </div>
+        ) : (
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+              Дашборд
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+              Общая статистика финансов
+              <span className="text-muted-foreground/80"> · </span>
+              <span className="text-foreground/90">{transactionMonthTitleRu(month)}</span>
+            </p>
+          </div>
+        )}
 
         <div className="flex shrink-0 flex-col items-stretch gap-0.5 sm:items-end">
           <div className="flex items-center gap-2">

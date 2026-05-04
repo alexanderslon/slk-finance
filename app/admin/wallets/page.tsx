@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db'
 import { WalletsManager } from '@/components/wallets-manager'
+import { AdminTopStats } from '@/components/admin-top-stats'
 
 async function getWallets() {
   return await sql`SELECT * FROM wallets ORDER BY created_at DESC`
@@ -14,6 +15,8 @@ export default async function WalletsPage() {
         <h1 className="text-xl font-bold leading-tight sm:text-2xl">Кошельки</h1>
         <p className="text-sm text-muted-foreground sm:text-base">Управление счетами и кошельками</p>
       </div>
+
+      <AdminTopStats />
 
       <WalletsManager initialWallets={wallets} />
     </div>
