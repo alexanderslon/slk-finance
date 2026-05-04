@@ -49,18 +49,11 @@ function currentCalendarMonthKey(): string {
 }
 
 /**
- * Месяц по умолчанию для админки заявок: самый свежий месяц, в котором что-то
- * есть. Если данных нет — текущий календарный, чтобы фильтр выглядел осмысленно
- * вместо «прыжка» в режим «все месяцы».
+ * По умолчанию в заявках — календарный текущий месяц, чтобы попадание на страницу
+ * совпадало со «вот что происходит сейчас» (как в сводках за май / июнь …).
  */
-function pickDefaultMonth(requests: readonly PartnerRequest[]): string {
-  if (requests.length === 0) return currentCalendarMonthKey()
-  let latest = ''
-  for (const r of requests) {
-    const k = transactionMonthKey(r.created_at)
-    if (k > latest) latest = k
-  }
-  return latest || currentCalendarMonthKey()
+function defaultRequestsMonth(): string {
+  return currentCalendarMonthKey()
 }
 
 const statusConfig = {
@@ -88,9 +81,7 @@ export function RequestsManager({
     'all',
   )
   const [search, setSearch] = useState('')
-  // По умолчанию открываем самый свежий месяц с заявками — иначе вся лента
-  // за всё время грузится длинным потоком и теряется ощущение актуальности.
-  const [monthFilter, setMonthFilter] = useState<string>(() => pickDefaultMonth(initialRequests))
+  const [monthFilter, setMonthFilter] = useState<string>(() => defaultRequestsMonth())
 
   useEffect(() => {
     setRequests(initialRequests)
