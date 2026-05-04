@@ -29,6 +29,11 @@ import type { PartnerRequest, Wallet } from '@/lib/db'
 import { estimatePartnerRequestBonus } from '@/lib/partner-bonus'
 import { formatCustomerPhoneDisplay } from '@/lib/phone-format'
 import { downloadCsv, todayStampForFilename, toCsv } from '@/lib/csv'
+import {
+  buildMonthSelectOptions,
+  transactionMonthKey,
+  transactionMonthTitleRu,
+} from '@/lib/transaction-dates'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -36,6 +41,26 @@ function formatCurrency(amount: number) {
     currency: 'RUB',
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+function currentCalendarMonthKey(): string {
+  const n = new Date()
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * Месяц по умолчанию для админки заявок: самый свежий месяц, в котором что-то
+ * есть. Если данных нет — текущий календарный, чтобы фильтр выглядел осмысленно
+ * вместо «прыжка» в режим «все месяцы».
+ */
+function pickDefaultMonth(requests: readonly PartnerRequest[]): string {
+  if (requests.length === 0) return currentCalendarMonthKey()
+  let latest = ''
+  for (const r of requests) {
+    const k = transactionMonthKey(r.created_at)
+    if (k > latest) latest = k
+  }
+  return latest || currentCalendarMonthKey()
 }
 
 const statusConfig = {
@@ -63,6 +88,9 @@ export function RequestsManager({
     'all',
   )
   const [search, setSearch] = useState('')
+  // По умолчанию открываем самый свежий месяц с заявками — иначе вся лента
+  // за всё время грузится длинным потоком и теряется ощущение актуальности.
+  const [monthFilter, setMonthFilter] = useState<string>(() => pickDefaultMonth(initialRequests))
 
   useEffect(() => {
     setRequests(initialRequests)
@@ -72,9 +100,15 @@ export function RequestsManager({
   const approvedCount = requests.filter((r) => r.status === 'approved').length
   const rejectedCount = requests.filter((r) => r.status === 'rejected').length
 
+  const monthOptions = useMemo(
+    () => buildMonthSelectOptions(initialRequests),
+    [initialRequests],
+  )
+
   const filteredRequests = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return requests.filter((r) => {
+      if (monthFilter !== 'all' && transactionMonthKey(r.created_at) !== monthFilter) return false
       if (statusFilter !== 'all' && r.status !== statusFilter) return false
       if (needle) {
         const haystack = [
@@ -96,7 +130,19 @@ export function RequestsManager({
       }
       return true
     })
-  }, [requests, statusFilter, search])
+  }, [requests, monthFilter, statusFilter, search])
+
+  // Группировка по месяцам (новые сверху). Внутри сохраняем порядок из исходного
+  // массива (server отдаёт по created_at DESC), поэтому свежее в начале блока.
+  const groupedByMonth = useMemo(() => {
+    const map = new Map<string, PartnerRequest[]>()
+    for (const r of filteredRequests) {
+      const key = transactionMonthKey(r.created_at)
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(r)
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [filteredRequests])
 
   function handleExportCsv() {
     if (filteredRequests.length === 0) {
@@ -425,6 +471,19 @@ export function RequestsManager({
               </button>
             ) : null}
           </div>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[200px]" aria-label="Месяц">
+              <SelectValue placeholder="Месяц" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все месяцы (по группам)</SelectItem>
+              {monthOptions.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {transactionMonthTitleRu(key)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select
             value={statusFilter}
             onValueChange={(v) =>
@@ -465,14 +524,47 @@ export function RequestsManager({
                 onClick={() => {
                   setStatusFilter('all')
                   setSearch('')
+                  setMonthFilter('all')
                 }}
               >
                 Сбросить фильтры
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredRequests.map((request) => {
+            <div className="space-y-6 sm:space-y-7">
+              {groupedByMonth.map(([monthKey, monthRequests]) => {
+                const monthTotal = monthRequests.reduce(
+                  (s, r) => s + Number(r.amount),
+                  0,
+                )
+                const monthPending = monthRequests.filter((r) => r.status === 'pending').length
+                return (
+                  <section key={monthKey} className="min-w-0 space-y-3">
+                    <header className="flex flex-col gap-1 border-b border-border pb-2 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-3">
+                      <h3 className="text-base font-semibold capitalize text-foreground sm:text-lg">
+                        {transactionMonthTitleRu(monthKey)}
+                      </h3>
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-xs text-muted-foreground sm:text-sm">
+                        <span>
+                          Заявок:{' '}
+                          <span className="font-medium text-foreground">{monthRequests.length}</span>
+                        </span>
+                        {monthPending > 0 ? (
+                          <span>
+                            новых:{' '}
+                            <span className="font-medium text-warning">{monthPending}</span>
+                          </span>
+                        ) : null}
+                        <span>
+                          сумма:{' '}
+                          <span className="font-medium tabular-nums text-foreground">
+                            {formatCurrency(monthTotal)}
+                          </span>
+                        </span>
+                      </div>
+                    </header>
+                    <div className="space-y-3">
+                      {monthRequests.map((request) => {
                 const config = statusConfig[request.status]
                 const StatusIcon = config.icon
                 return (
@@ -563,6 +655,10 @@ export function RequestsManager({
                       )}
                     </div>
                   </div>
+                )
+                      })}
+                    </div>
+                  </section>
                 )
               })}
             </div>
