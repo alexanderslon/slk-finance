@@ -72,6 +72,29 @@ function counterpartyLabel(t: Transaction): string {
   return parts.length > 0 ? parts.join(' · ') : '—'
 }
 
+function currentCalendarMonthKey(): string {
+  const n = new Date()
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * Месяц, который страница «Доходы»/«Расходы» показывает по умолчанию.
+ *
+ * Логика: если в данных есть операции — берём самый свежий месяц с операцией
+ * (а не текущий календарный, потому что в нём может ещё ничего не быть).
+ * Если операций совсем нет — текущий календарный месяц, чтобы фильтр выглядел
+ * осмысленно, а не «прыгал» в `all` с пустым результатом.
+ */
+function pickDefaultMonth(transactions: readonly Transaction[]): string {
+  if (transactions.length === 0) return currentCalendarMonthKey()
+  let latest = ''
+  for (const t of transactions) {
+    const k = transactionMonthKey(t.created_at)
+    if (k > latest) latest = k
+  }
+  return latest || currentCalendarMonthKey()
+}
+
 type Props = {
   type: 'income' | 'expense'
   initialTransactions: Transaction[]
@@ -94,7 +117,12 @@ export function TransactionsManager({
   const [isOpen, setIsOpen] = useState(false)
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null)
   const [loading, setLoading] = useState(false)
-  const [monthFilter, setMonthFilter] = useState<string>('all')
+  // Стартуем сразу на свежем месяце с операциями — иначе при заходе видишь
+  // длинную ленту за всё время и не понимаешь «что у меня за этот месяц».
+  // Считаем lazy: вычислится один раз на маунте, не на каждый рендер.
+  const [monthFilter, setMonthFilter] = useState<string>(() =>
+    pickDefaultMonth(initialTransactions),
+  )
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [walletFilter, setWalletFilter] = useState<string>('all')
   const [counterpartyFilter, setCounterpartyFilter] = useState<string>('all')
