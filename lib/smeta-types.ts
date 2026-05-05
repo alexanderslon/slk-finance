@@ -22,7 +22,11 @@ export const MATERIALS_STAGE = 6 as const satisfies SmetaStage
 export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5, 6]
 
 /** Вариант сметы — заголовок печати и набор типовых позиций при «Новая смета». */
-export type SmetaVariantId = 'construction' | 'shower-enclosure' | 'cctv'
+export type SmetaVariantId =
+  | 'construction'
+  | 'shower-enclosure'
+  | 'cctv-basic'
+  | 'cctv-optimal'
 
 export interface RowData {
   id: number
