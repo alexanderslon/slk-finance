@@ -406,9 +406,9 @@ export function ConstructionSmetaCalculator() {
   const [header, setHeader] = useState<HeaderData>(() => defaultHeader())
 
   const [rows, setRows] = useState<RowData[]>(() => smetaTemplateRows('construction'))
-  const [prepayment, setPrepayment] = useState<string>('5000')
+  const [prepayment, setPrepayment] = useState<string>('0')
   const [laborer, setLaborer] = useState<string>('0')
-  const [otkat, setOtkat] = useState<string>('5000')
+  const [otkat, setOtkat] = useState<string>('0')
   const [overheadPercent, setOverheadPercent] = useState<string>('0')
   const [customerDiscountPercent, setCustomerDiscountPercent] = useState<string>('0')
   const [enabledStages, setEnabledStages] = useState<SmetaStage[]>(() => [...SMETA_MAIN_STAGES])
@@ -2111,7 +2111,7 @@ export function ConstructionSmetaCalculator() {
               <p className="mt-2 text-xs text-zinc-500">
                 Меняет заголовок печати и сохранённый тип сметы; таблица позиций не трогается — можно переназначить уже
                 заполненную смету и сохранить. Для видеонаблюдения в списке две отдельные готовые сметы: базовый (14
-                суток) и оптимальный (30 суток).
+                суток) и оптимальный (14 суток).
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button
