@@ -3,6 +3,8 @@ import { WorkersManager } from '@/components/workers-manager'
 import { WorkersMonthPicker } from '@/components/workers-month-picker'
 import { buildMonthSelectOptionsFromBounds } from '@/lib/transaction-dates'
 
+export const dynamic = 'force-dynamic'
+
 function parseMonthParam(raw: string | null): { y: number; m: number } | null {
   if (!raw || !/^\d{4}-\d{2}$/.test(raw)) return null
   const y = Number(raw.slice(0, 4))

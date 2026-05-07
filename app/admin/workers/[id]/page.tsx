@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkerPayoutsMonthPicker } from '@/components/worker-payouts-month-picker'
 import { buildMonthSelectOptionsFromBounds, formatTransactionDateRu } from '@/lib/transaction-dates'
 
+export const dynamic = 'force-dynamic'
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -47,12 +49,12 @@ export default async function WorkerPayoutsPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  params: { id: string }
+  searchParams?: Record<string, string | string[] | undefined>
 }) {
-  const { id } = await params
+  const { id } = params
   const workerId = Number(id)
-  const sp = (await searchParams) ?? {}
+  const sp = searchParams ?? {}
   const monthRaw = typeof sp.month === 'string' ? sp.month : null
   const month = monthRaw && /^\d{4}-\d{2}$/.test(monthRaw) ? monthRaw : 'all'
 

@@ -30,6 +30,7 @@ export function WorkersMonthPicker({
         else sp.set('month', next)
         const q = sp.toString()
         router.push(q ? `${pathname}?${q}` : pathname)
+        router.refresh()
       }}
     >
       <SelectTrigger className="h-10 w-[min(100%,280px)] bg-white">
