@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { transactionMonthTitleRu } from '@/lib/transaction-dates'
 
 export function WorkerPayoutsMonthPicker({
@@ -22,9 +21,11 @@ export function WorkerPayoutsMonthPicker({
   }, [monthOptions])
 
   return (
-    <Select
+    <select
+      className="h-10 w-[min(100%,280px)] rounded-md border border-input bg-white px-3 text-sm outline-none"
       value={value}
-      onValueChange={(next) => {
+      onChange={(e) => {
+        const next = e.target.value
         const sp = new URLSearchParams(searchParams.toString())
         if (next === 'all') sp.delete('month')
         else sp.set('month', next)
@@ -33,20 +34,15 @@ export function WorkerPayoutsMonthPicker({
         router.refresh()
       }}
     >
-      <SelectTrigger className="h-10 w-[min(100%,280px)] bg-white">
-        <SelectValue placeholder="Месяц" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">За всё время</SelectItem>
-        {options
-          .filter((o) => o !== 'all')
-          .map((ym) => (
-            <SelectItem key={ym} value={ym}>
-              {transactionMonthTitleRu(ym)}
-            </SelectItem>
-          ))}
-      </SelectContent>
-    </Select>
+      <option value="all">За всё время</option>
+      {options
+        .filter((o) => o !== 'all')
+        .map((ym) => (
+          <option key={ym} value={ym}>
+            {transactionMonthTitleRu(ym)}
+          </option>
+        ))}
+    </select>
   )
 }
 
