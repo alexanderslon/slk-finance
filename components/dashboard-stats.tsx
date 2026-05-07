@@ -245,6 +245,7 @@ export function DashboardStats({
                   {formatCurrency(totalBalance)}
                 </p>
                 <p className="text-[11px] leading-tight text-muted-foreground">Баланс</p>
+                <p className="text-[10px] leading-tight text-muted-foreground/85">без резервных</p>
               </div>
             </CardContent>
           </Card>
@@ -336,6 +337,9 @@ export function DashboardStats({
             </CardHeader>
             <CardContent className="px-6 pb-6 pt-0">
               <div className="text-2xl font-bold tabular-nums xl:text-3xl">{formatCurrency(totalBalance)}</div>
+              <p className="mt-2 text-xs leading-snug text-muted-foreground">
+                Без кошельков «на развитие», благотворительность и «на будущее».
+              </p>
             </CardContent>
           </Card>
         </Link>

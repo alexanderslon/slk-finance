@@ -232,12 +232,32 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Выплачено</p>
+                      <p className="text-muted-foreground">Выплачено (итого)</p>
                         <p className="font-medium tabular-nums">
-                          {Number(worker.salary_paid) ? formatCurrency(Number(worker.salary_paid)) : '—'}
+                        {Number(worker.paid_total ?? worker.salary_paid) ? formatCurrency(Number(worker.paid_total ?? worker.salary_paid)) : '—'}
                         </p>
                       </div>
                     </div>
+                  <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Аванс</p>
+                      <p className="font-medium tabular-nums">
+                        {Number(worker.paid_advance) ? formatCurrency(Number(worker.paid_advance)) : '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">ЗП</p>
+                      <p className="font-medium tabular-nums">
+                        {Number(worker.paid_salary) ? formatCurrency(Number(worker.paid_salary)) : '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Премия</p>
+                      <p className="font-medium tabular-nums">
+                        {Number(worker.paid_bonus) ? formatCurrency(Number(worker.paid_bonus)) : '—'}
+                      </p>
+                    </div>
+                  </div>
                   </div>
                 ))}
               </div>
@@ -248,7 +268,10 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                       <TableHead>Имя</TableHead>
                       <TableHead>Должность</TableHead>
                       <TableHead>Зарплата</TableHead>
-                      <TableHead>Выплачено</TableHead>
+                      <TableHead>Аванс</TableHead>
+                      <TableHead>ЗП</TableHead>
+                      <TableHead>Премия</TableHead>
+                      <TableHead>Выплачено (итого)</TableHead>
                       <TableHead>Телефон</TableHead>
                       <TableHead className="w-24"></TableHead>
                     </TableRow>
@@ -260,7 +283,16 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                         <TableCell>{worker.position || '-'}</TableCell>
                         <TableCell>{worker.salary ? formatCurrency(Number(worker.salary)) : '-'}</TableCell>
                         <TableCell>
-                          {Number(worker.salary_paid) ? formatCurrency(Number(worker.salary_paid)) : '-'}
+                          {Number(worker.paid_advance) ? formatCurrency(Number(worker.paid_advance)) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {Number(worker.paid_salary) ? formatCurrency(Number(worker.paid_salary)) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {Number(worker.paid_bonus) ? formatCurrency(Number(worker.paid_bonus)) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {Number(worker.paid_total ?? worker.salary_paid) ? formatCurrency(Number(worker.paid_total ?? worker.salary_paid)) : '-'}
                         </TableCell>
                         <TableCell>{worker.phone || '-'}</TableCell>
                         <TableCell>

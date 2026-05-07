@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db'
+import { sumWalletsForDashboardTotal } from '@/lib/wallet-dashboard-total'
 import { DashboardStats } from '@/components/dashboard-stats'
 import { buildMonthSelectOptionsFromBounds } from '@/lib/transaction-dates'
 
@@ -24,7 +25,7 @@ export async function AdminTopStats() {
   const monthEnd = new Date(Date.UTC(y, m, 1, 0, 0, 0, 0))
 
   const [walletsRows, debtsRows, boundsRows, monthStatsRows, pendingRows] = await Promise.all([
-    sql`SELECT COALESCE(SUM(balance), 0)::float AS total FROM wallets`,
+    sql`SELECT name, balance FROM wallets`,
     sql`
       SELECT
         COALESCE(SUM(CASE WHEN type = 'given' THEN amount ELSE 0 END), 0)::float AS given,
@@ -49,7 +50,9 @@ export async function AdminTopStats() {
     sql`SELECT COUNT(*)::text AS count FROM partner_requests WHERE status = 'pending'`,
   ])
 
-  const totalBalance = Number(walletsRows[0]?.total ?? 0)
+  const totalBalance = sumWalletsForDashboardTotal(
+    walletsRows as { name: string; balance: number | string }[],
+  )
   const totalDebtGiven = Number(debtsRows[0]?.given ?? 0)
   const totalDebtTaken = Number(debtsRows[0]?.taken ?? 0)
 

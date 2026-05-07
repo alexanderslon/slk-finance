@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db'
+import { sumWalletsForDashboardTotal } from '@/lib/wallet-dashboard-total'
 import { AdminDashboardShell } from '@/components/admin-dashboard-shell'
 import { WalletCards } from '@/components/wallet-cards'
 import { RecentTransactions } from '@/components/recent-transactions'
@@ -188,7 +189,9 @@ async function getDashboardData() {
       loadAnalytics(monthStart, monthEnd, cashflowStart, defaultMonth, y, m),
     ])
 
-  const totalBalance = wallets.reduce((sum: number, w: { balance: number }) => sum + Number(w.balance), 0)
+  const totalBalance = sumWalletsForDashboardTotal(
+    wallets as { name: string; balance: number | string }[],
+  )
   const totalDebtGiven = debts
     .filter((d: { type: string }) => d.type === 'given')
     .reduce((sum: number, d: { amount: number }) => sum + Number(d.amount), 0)

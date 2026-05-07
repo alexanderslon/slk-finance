@@ -3,13 +3,22 @@ import { sql } from '@/lib/db'
 import { txMulti } from '@/lib/db-tx'
 import { getCurrentUser } from '@/lib/auth'
 
-const SALARY_LIKE_CATEGORIES = new Set(['ЗП', 'Аванс', 'Премия'])
+const WORKER_PAYOUT_CATEGORY_KIND: Readonly<Record<string, 'salary' | 'advance' | 'bonus'>> = {
+  // legacy names
+  ЗП: 'salary',
+  Аванс: 'advance',
+  Премия: 'bonus',
+  // canonical expense names
+  'Зарплата работникам': 'salary',
+  'Аванс работникам': 'advance',
+  'Премия работникам': 'bonus',
+}
 
-async function isSalaryLikeExpense(categoryId: number): Promise<boolean> {
+async function workerPayoutKind(categoryId: number): Promise<'salary' | 'advance' | 'bonus' | null> {
   const rows = await sql`SELECT name, type FROM categories WHERE id = ${categoryId} LIMIT 1`
   const c = rows[0]
   if (!c || c.type !== 'expense') return false
-  return SALARY_LIKE_CATEGORIES.has(c.name)
+  return WORKER_PAYOUT_CATEGORY_KIND[c.name] ?? null
 }
 
 function toFiniteNumber(v: unknown): number | null {
@@ -108,7 +117,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const isSalary = type === 'expense' && worker_id ? await isSalaryLikeExpense(category_id) : false
+    const payoutKind = type === 'expense' && worker_id ? await workerPayoutKind(category_id) : null
     const balanceDelta = type === 'income' ? amount : -amount
 
     const [insertResult] = await txMulti((tx) => {
@@ -120,7 +129,7 @@ export async function POST(request: NextRequest) {
         `,
         tx`UPDATE wallets SET balance = balance + ${balanceDelta} WHERE id = ${wallet_id}`,
       ]
-      if (isSalary && worker_id) {
+      if (payoutKind && worker_id) {
         queries.push(
           tx`UPDATE workers SET salary_paid = COALESCE(salary_paid, 0) + ${amount} WHERE id = ${worker_id}`,
         )
@@ -179,15 +188,15 @@ export async function PUT(request: NextRequest) {
     const reverseDelta = old.type === 'income' ? -oldAmount : oldAmount
     const newDelta = type === 'income' ? amount : -amount
 
-    const oldIsSalary =
-      old.type === 'expense' && old.worker_id ? await isSalaryLikeExpense(Number(old.category_id)) : false
-    const newIsSalary = type === 'expense' && worker_id ? await isSalaryLikeExpense(category_id) : false
+    const oldPayoutKind =
+      old.type === 'expense' && old.worker_id ? await workerPayoutKind(Number(old.category_id)) : null
+    const newPayoutKind = type === 'expense' && worker_id ? await workerPayoutKind(category_id) : null
 
     const result = await txMulti((tx) => {
       const queries: PromiseLike<unknown[]>[] = [
         tx`UPDATE wallets SET balance = balance + ${reverseDelta} WHERE id = ${old.wallet_id}`,
       ]
-      if (oldIsSalary && old.worker_id) {
+      if (oldPayoutKind && old.worker_id) {
         queries.push(
           tx`UPDATE workers SET salary_paid = COALESCE(salary_paid, 0) - ${oldAmount} WHERE id = ${old.worker_id}`,
         )
@@ -202,7 +211,7 @@ export async function PUT(request: NextRequest) {
         `,
       )
       queries.push(tx`UPDATE wallets SET balance = balance + ${newDelta} WHERE id = ${wallet_id}`)
-      if (newIsSalary && worker_id) {
+      if (newPayoutKind && worker_id) {
         queries.push(
           tx`UPDATE workers SET salary_paid = COALESCE(salary_paid, 0) + ${amount} WHERE id = ${worker_id}`,
         )
@@ -243,14 +252,14 @@ export async function DELETE(request: NextRequest) {
 
     const oldAmount = Number(old.amount)
     const reverseDelta = old.type === 'income' ? -oldAmount : oldAmount
-    const oldIsSalary =
-      old.type === 'expense' && old.worker_id ? await isSalaryLikeExpense(Number(old.category_id)) : false
+    const oldPayoutKind =
+      old.type === 'expense' && old.worker_id ? await workerPayoutKind(Number(old.category_id)) : null
 
     await txMulti((tx) => {
       const queries: PromiseLike<unknown[]>[] = [
         tx`UPDATE wallets SET balance = balance + ${reverseDelta} WHERE id = ${old.wallet_id}`,
       ]
-      if (oldIsSalary && old.worker_id) {
+      if (oldPayoutKind && old.worker_id) {
         queries.push(
           tx`UPDATE workers SET salary_paid = COALESCE(salary_paid, 0) - ${oldAmount} WHERE id = ${old.worker_id}`,
         )

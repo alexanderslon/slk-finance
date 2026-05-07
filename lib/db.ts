@@ -121,6 +121,11 @@ export type Worker = {
   position?: string
   salary?: number
   salary_paid?: number
+  /** Расчётные поля для UI (агрегации по операциям). */
+  paid_salary?: number
+  paid_advance?: number
+  paid_bonus?: number
+  paid_total?: number
   phone?: string
   created_at: Date
 }
