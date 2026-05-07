@@ -16,9 +16,10 @@ export function WorkersMonthPicker({
   const searchParams = useSearchParams()
 
   const options = useMemo(() => {
-    const uniq = Array.from(new Set(monthOptions))
-    return ['all', ...uniq]
-  }, [monthOptions])
+    const base = Array.from(new Set(monthOptions))
+    const withValue = value && value !== 'all' && !base.includes(value) ? [value, ...base] : base
+    return ['all', ...withValue]
+  }, [monthOptions, value])
 
   return (
     <select
