@@ -82,7 +82,9 @@ export default async function WorkerPayoutsPage({
       AND c.name = ANY(${PAYOUT_CATEGORIES as unknown as string[]})
   `
   const b = boundsRows?.[0] as { min_ym?: string | null; max_ym?: string | null } | undefined
-  const monthOptions = buildMonthSelectOptionsFromBounds(b?.min_ym ?? null, b?.max_ym ?? null)
+  const monthOptionsBase = buildMonthSelectOptionsFromBounds(b?.min_ym ?? null, b?.max_ym ?? null)
+  const monthOptions =
+    month !== 'all' && !monthOptionsBase.includes(month) ? [month, ...monthOptionsBase] : monthOptionsBase
 
   const parsed = month === 'all' ? null : parseMonthParam(month)
   const mb = parsed ? monthBounds(parsed.y, parsed.m) : null

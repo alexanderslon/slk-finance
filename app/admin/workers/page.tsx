@@ -82,10 +82,12 @@ export default async function WorkersPage({
   const monthRaw = typeof sp.month === 'string' ? sp.month : null
 
   const bounds = await getPayoutMonthBounds()
-  const monthOptions = buildMonthSelectOptionsFromBounds(bounds?.min_ym ?? null, bounds?.max_ym ?? null)
+  const monthOptionsBase = buildMonthSelectOptionsFromBounds(bounds?.min_ym ?? null, bounds?.max_ym ?? null)
   const month = monthRaw && /^\d{4}-\d{2}$/.test(monthRaw) ? monthRaw : 'all'
 
   const workers = await getWorkers(month === 'all' ? null : month)
+  const monthOptions =
+    month !== 'all' && !monthOptionsBase.includes(month) ? [month, ...monthOptionsBase] : monthOptionsBase
 
   return (
     <div className="space-y-5 sm:space-y-6">
