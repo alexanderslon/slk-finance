@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -196,7 +197,13 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="line-clamp-2 font-semibold leading-snug">{worker.name}</p>
+                        <Link
+                          href={`/admin/workers/${worker.id}`}
+                          className="line-clamp-2 font-semibold leading-snug hover:underline"
+                          title="История выплат работнику"
+                        >
+                          {worker.name}
+                        </Link>
                         <p className="text-sm text-muted-foreground">{worker.position || '—'}</p>
                         {worker.phone ? (
                           <p className="mt-1 font-mono text-sm tabular-nums">{worker.phone}</p>
@@ -242,19 +249,19 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                     <div>
                       <p className="text-muted-foreground">Аванс</p>
                       <p className="font-medium tabular-nums">
-                        {Number(worker.paid_advance) ? formatCurrency(Number(worker.paid_advance)) : '—'}
+                        {formatCurrency(Number(worker.paid_advance ?? 0))}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">ЗП</p>
                       <p className="font-medium tabular-nums">
-                        {Number(worker.paid_salary) ? formatCurrency(Number(worker.paid_salary)) : '—'}
+                        {formatCurrency(Number(worker.paid_salary ?? 0))}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Премия</p>
                       <p className="font-medium tabular-nums">
-                        {Number(worker.paid_bonus) ? formatCurrency(Number(worker.paid_bonus)) : '—'}
+                        {formatCurrency(Number(worker.paid_bonus ?? 0))}
                       </p>
                     </div>
                   </div>
@@ -279,17 +286,25 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                   <TableBody>
                     {workers.map((worker) => (
                       <TableRow key={worker.id}>
-                        <TableCell className="font-medium">{worker.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link
+                            href={`/admin/workers/${worker.id}`}
+                            className="hover:underline"
+                            title="История выплат работнику"
+                          >
+                            {worker.name}
+                          </Link>
+                        </TableCell>
                         <TableCell>{worker.position || '-'}</TableCell>
                         <TableCell>{worker.salary ? formatCurrency(Number(worker.salary)) : '-'}</TableCell>
                         <TableCell>
-                          {Number(worker.paid_advance) ? formatCurrency(Number(worker.paid_advance)) : '-'}
+                          {formatCurrency(Number(worker.paid_advance ?? 0))}
                         </TableCell>
                         <TableCell>
-                          {Number(worker.paid_salary) ? formatCurrency(Number(worker.paid_salary)) : '-'}
+                          {formatCurrency(Number(worker.paid_salary ?? 0))}
                         </TableCell>
                         <TableCell>
-                          {Number(worker.paid_bonus) ? formatCurrency(Number(worker.paid_bonus)) : '-'}
+                          {formatCurrency(Number(worker.paid_bonus ?? 0))}
                         </TableCell>
                         <TableCell>
                           {Number(worker.paid_total ?? worker.salary_paid) ? formatCurrency(Number(worker.paid_total ?? worker.salary_paid)) : '-'}

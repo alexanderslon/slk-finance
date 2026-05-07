@@ -20,46 +20,37 @@ function monthBounds(y: number, m: number): { start: Date; end: Date } {
 async function getWorkers(month: string | null) {
   const parsed = parseMonthParam(month)
   const bounds = parsed ? monthBounds(parsed.y, parsed.m) : null
-  const startIso = bounds?.start.toISOString() ?? null
-  const endIso = bounds?.end.toISOString() ?? null
+  const start = bounds?.start ?? null
+  const end = bounds?.end ?? null
+
+  if (!start || !end) {
+    return await sql`
+      SELECT
+        w.*,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('ЗП', 'Зарплата работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_salary,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('Аванс', 'Аванс работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_advance,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('Премия', 'Премия работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_bonus,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('ЗП','Аванс','Премия','Зарплата работникам','Аванс работникам','Премия работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_total
+      FROM workers w
+      LEFT JOIN transactions t ON t.worker_id = w.id
+      LEFT JOIN categories c ON c.id = t.category_id
+      GROUP BY w.id
+      ORDER BY w.created_at DESC
+    `
+  }
 
   return await sql`
     SELECT
       w.*,
-      COALESCE(SUM(
-        CASE
-          WHEN t.type = 'expense'
-            AND c.name IN ('ЗП', 'Зарплата работникам')
-            AND (${startIso}::timestamptz IS NULL OR (t.created_at >= ${startIso} AND t.created_at < ${endIso}))
-          THEN t.amount ELSE 0
-        END
-      ), 0)::float AS paid_salary,
-      COALESCE(SUM(
-        CASE
-          WHEN t.type = 'expense'
-            AND c.name IN ('Аванс', 'Аванс работникам')
-            AND (${startIso}::timestamptz IS NULL OR (t.created_at >= ${startIso} AND t.created_at < ${endIso}))
-          THEN t.amount ELSE 0
-        END
-      ), 0)::float AS paid_advance,
-      COALESCE(SUM(
-        CASE
-          WHEN t.type = 'expense'
-            AND c.name IN ('Премия', 'Премия работникам')
-            AND (${startIso}::timestamptz IS NULL OR (t.created_at >= ${startIso} AND t.created_at < ${endIso}))
-          THEN t.amount ELSE 0
-        END
-      ), 0)::float AS paid_bonus,
-      COALESCE(SUM(
-        CASE
-          WHEN t.type = 'expense'
-            AND c.name IN ('ЗП','Аванс','Премия','Зарплата работникам','Аванс работникам','Премия работникам')
-            AND (${startIso}::timestamptz IS NULL OR (t.created_at >= ${startIso} AND t.created_at < ${endIso}))
-          THEN t.amount ELSE 0
-        END
-      ), 0)::float AS paid_total
+      COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('ЗП', 'Зарплата работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_salary,
+      COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('Аванс', 'Аванс работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_advance,
+      COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('Премия', 'Премия работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_bonus,
+      COALESCE(SUM(CASE WHEN t.type = 'expense' AND c.name IN ('ЗП','Аванс','Премия','Зарплата работникам','Аванс работникам','Премия работникам') THEN t.amount ELSE 0 END), 0)::float AS paid_total
     FROM workers w
-    LEFT JOIN transactions t ON t.worker_id = w.id
+    LEFT JOIN transactions t
+      ON t.worker_id = w.id
+     AND t.created_at >= ${start.toISOString()}
+     AND t.created_at < ${end.toISOString()}
     LEFT JOIN categories c ON c.id = t.category_id
     GROUP BY w.id
     ORDER BY w.created_at DESC
