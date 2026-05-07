@@ -245,14 +245,6 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                         </p>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <Link
-                        href={`/admin/workers/${worker.id}`}
-                        className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-border bg-background/40 text-sm font-medium hover:bg-background/60"
-                      >
-                        История выплат по дням
-                      </Link>
-                    </div>
                   <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">Аванс</p>
@@ -320,13 +312,6 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                         <TableCell>{worker.phone || '-'}</TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-1">
-                            <Link
-                              href={`/admin/workers/${worker.id}`}
-                              className="inline-flex h-9 items-center rounded-md px-2 text-xs font-medium text-primary hover:bg-primary/10 hover:underline"
-                              title="История выплат по дням"
-                            >
-                              История
-                            </Link>
                             <Button
                               variant="ghost"
                               size="icon"

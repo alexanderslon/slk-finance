@@ -16,10 +16,9 @@ export function WorkerPayoutsMonthPicker({
   const searchParams = useSearchParams()
 
   const options = useMemo(() => {
-    const base = Array.from(new Set(monthOptions))
-    const withValue = value && value !== 'all' && !base.includes(value) ? [value, ...base] : base
-    return ['all', ...withValue]
-  }, [monthOptions, value])
+    const uniq = Array.from(new Set(monthOptions))
+    return ['all', ...uniq]
+  }, [monthOptions])
 
   return (
     <select
