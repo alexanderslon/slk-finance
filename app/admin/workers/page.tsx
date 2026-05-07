@@ -83,9 +83,9 @@ async function getPayoutMonthBounds() {
 export default async function WorkersPage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  searchParams?: Record<string, string | string[] | undefined>
 }) {
-  const sp = (await searchParams) ?? {}
+  const sp = searchParams ?? {}
   const monthRaw = typeof sp.month === 'string' ? sp.month : null
 
   const bounds = await getPayoutMonthBounds()

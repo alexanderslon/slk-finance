@@ -17,7 +17,7 @@ const WORKER_PAYOUT_CATEGORY_KIND: Readonly<Record<string, 'salary' | 'advance' 
 async function workerPayoutKind(categoryId: number): Promise<'salary' | 'advance' | 'bonus' | null> {
   const rows = await sql`SELECT name, type FROM categories WHERE id = ${categoryId} LIMIT 1`
   const c = rows[0]
-  if (!c || c.type !== 'expense') return false
+  if (!c || c.type !== 'expense') return null
   return WORKER_PAYOUT_CATEGORY_KIND[c.name] ?? null
 }
 
