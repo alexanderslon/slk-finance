@@ -104,6 +104,19 @@ function safeFilename(s: string): string {
   return s.replace(/[^\w\-]+/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
 }
 
+/** Имя файла по умолчанию при «Печать → PDF» берётся из `document.title`. */
+function smetaPrintDocumentTitle(header: HeaderData, estimateId: number | null): string {
+  const num = header.documentNumber?.trim()
+  const date = header.date?.trim()
+  const parts: string[] = []
+  if (num) parts.push(num)
+  else if (estimateId != null) parts.push(`id-${estimateId}`)
+  if (date) parts.push(date)
+  let title = parts.length ? `Смета · ${parts.join(' · ')}` : estimateId != null ? `Смета · id ${estimateId}` : 'Смета'
+  title = title.replace(/[<>:"/\\|?*\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim()
+  return title.slice(0, 200) || 'Смета'
+}
+
 /**
  * Подготовка JPG к стандартной печати A4 (портрет).
  *
@@ -1183,9 +1196,12 @@ export function ConstructionSmetaCalculator() {
     const html = document.documentElement
     html.classList.add('smeta-printing')
     let restored = false
+    const previousTitle = document.title
+    document.title = smetaPrintDocumentTitle(header, estimateId)
     const restore = () => {
       if (restored) return
       restored = true
+      document.title = previousTitle
       html.classList.remove('smeta-printing')
       window.removeEventListener('afterprint', restore)
     }
@@ -1195,7 +1211,7 @@ export function ConstructionSmetaCalculator() {
       // Подстраховка: некоторые браузеры (особенно мобильные) не шлют afterprint надёжно.
       window.setTimeout(restore, 1500)
     }, 50)
-  }, [])
+  }, [estimateId, header.date, header.documentNumber])
 
   const handlePreviewPrint = useCallback(() => {
     if (isIOS()) {
