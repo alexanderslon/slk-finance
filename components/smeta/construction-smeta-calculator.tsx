@@ -25,6 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { parseSmetaNumber } from '@/lib/smeta-numbers'
+import { normalizeDocRows } from '@/lib/smeta-row-normalize'
 import type { DocState, HeaderData, RowData, SmetaMainStageKey, SmetaStage, SmetaVariantId } from '@/lib/smeta-types'
 import {
   ADDITIONAL_WORK_STAGE,
@@ -182,16 +184,7 @@ function isEmbeddedInAppBrowser(): boolean {
 }
 
 function toNumber(v: unknown): number {
-  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  if (typeof v === "string") {
-    const cleaned = v
-      .replace(/\u00A0/g, " ")
-      .replace(/\s+/g, "")
-      .replace(",", ".");
-    const n = parseFloat(cleaned);
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+  return parseSmetaNumber(v)
 }
 
 function fmt(n: number): string {
@@ -453,12 +446,8 @@ export function ConstructionSmetaCalculator() {
     if (doc.header) setHeader({ ...doc.header })
     // Если в загруженной смете строк нет — реально применяем пустой массив,
     // чтобы UI отразил «нет позиций», а не оставлял старую таблицу.
-    const incomingRows: RowData[] = Array.isArray(doc.rows)
-      ? doc.rows.map((r) => ({
-          ...r,
-          stage: normalizeSmetaStage((r as RowData).stage),
-        }))
-      : []
+    // Числа нормализуем (строки из Excel, 12.345,67 и т.д.) — иначе итог «плывёт».
+    const incomingRows: RowData[] = normalizeDocRows(doc.rows)
     setRows(incomingRows)
     nextIdRef.current = nextRowIdFromRows(incomingRows)
 
@@ -941,7 +930,7 @@ export function ConstructionSmetaCalculator() {
     try {
       const parsed = JSON.parse(raw) as DocState;
       if (parsed?.header) setHeader(parsed.header);
-      if (parsed?.rows) setRows(parsed.rows);
+      if (parsed?.rows) setRows(normalizeDocRows(parsed.rows));
       if (typeof parsed?.prepayment === "string") setPrepayment(parsed.prepayment);
       if (typeof parsed?.laborer === "string") setLaborer(parsed.laborer);
       if (typeof parsed?.otkat === "string") setOtkat(parsed.otkat);
