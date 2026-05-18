@@ -42,6 +42,11 @@ export function formatTransactionDateRu(created_at: string | Date): string {
   return format(new Date(y, mo, day), 'd MMM yyyy', { locale: ru })
 }
 
+export function currentCalendarMonthKey(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
 function ymMax(a: string, b: string): string {
   return a >= b ? a : b
 }

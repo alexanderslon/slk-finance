@@ -1,7 +1,11 @@
 import { sql } from '@/lib/db'
 import { WorkersManager } from '@/components/workers-manager'
 import { WorkersMonthPicker } from '@/components/workers-month-picker'
-import { buildMonthSelectOptionsFromBounds } from '@/lib/transaction-dates'
+import {
+  buildMonthSelectOptionsFromBounds,
+  currentCalendarMonthKey,
+  transactionMonthTitleRu,
+} from '@/lib/transaction-dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,6 +63,23 @@ async function getWorkers(month: string | null) {
   `
 }
 
+async function getMonthPayoutTotal(month: string): Promise<number> {
+  const parsed = parseMonthParam(month)
+  if (!parsed) return 0
+  const { start, end } = monthBounds(parsed.y, parsed.m)
+  const rows = await sql`
+    SELECT COALESCE(SUM(t.amount), 0)::float AS total
+    FROM transactions t
+    LEFT JOIN categories c ON c.id = t.category_id
+    WHERE t.type = 'expense'
+      AND t.worker_id IS NOT NULL
+      AND c.name IN ('ЗП','Аванс','Премия','Зарплата работникам','Аванс работникам','Премия работникам')
+      AND t.created_at >= ${start.toISOString()}
+      AND t.created_at < ${end.toISOString()}
+  `
+  return Number((rows[0] as { total?: number })?.total) || 0
+}
+
 async function getPayoutMonthBounds() {
   const rows = await sql`
     SELECT
@@ -83,11 +104,21 @@ export default async function WorkersPage({
 
   const bounds = await getPayoutMonthBounds()
   const monthOptionsBase = buildMonthSelectOptionsFromBounds(bounds?.min_ym ?? null, bounds?.max_ym ?? null)
-  const month = monthRaw && /^\d{4}-\d{2}$/.test(monthRaw) ? monthRaw : 'all'
+  const month =
+    monthRaw === 'all'
+      ? 'all'
+      : monthRaw && /^\d{4}-\d{2}$/.test(monthRaw)
+        ? monthRaw
+        : currentCalendarMonthKey()
 
   const workers = await getWorkers(month === 'all' ? null : month)
   const monthOptions =
     month !== 'all' && !monthOptionsBase.includes(month) ? [month, ...monthOptionsBase] : monthOptionsBase
+
+  const monthQuery =
+    month === 'all' ? '?month=all' : `?month=${encodeURIComponent(month)}`
+
+  const monthPayoutTotal = month === 'all' ? null : await getMonthPayoutTotal(month)
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -99,7 +130,13 @@ export default async function WorkersPage({
         </div>
       </div>
 
-      <WorkersManager initialWorkers={workers} />
+      <WorkersManager
+        initialWorkers={workers}
+        monthQuery={monthQuery}
+        selectedMonth={month}
+        monthPayoutTotal={monthPayoutTotal}
+        monthLabel={month === 'all' ? null : transactionMonthTitleRu(month)}
+      />
     </div>
   )
 }

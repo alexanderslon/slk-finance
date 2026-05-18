@@ -35,7 +35,19 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
-export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] }) {
+export function WorkersManager({
+  initialWorkers,
+  monthQuery = '',
+  selectedMonth = 'all',
+  monthPayoutTotal = null,
+  monthLabel = null,
+}: {
+  initialWorkers: Worker[]
+  monthQuery?: string
+  selectedMonth?: string
+  monthPayoutTotal?: number | null
+  monthLabel?: string | null
+}) {
   const router = useRouter()
   const [workers, setWorkers] = useState(initialWorkers)
   const [isOpen, setIsOpen] = useState(false)
@@ -107,8 +119,24 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
     }
   }
 
+  const workerHref = (id: number) => `/admin/workers/${id}${monthQuery}`
+
   return (
     <>
+      {selectedMonth !== 'all' && monthLabel != null && monthPayoutTotal != null ? (
+        <div className="rounded-2xl border border-border bg-secondary/30 px-4 py-4 sm:px-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Итого выплат за {monthLabel}
+          </p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-destructive sm:text-3xl">
+            −{formatCurrency(monthPayoutTotal)}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Откройте работника — каждая выплата отдельной строкой в таблице
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex justify-stretch sm:justify-end">
         <Dialog open={isOpen} onOpenChange={(open) => {
           setIsOpen(open)
@@ -198,7 +226,7 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <Link
-                          href={`/admin/workers/${worker.id}`}
+                          href={workerHref(worker.id)}
                           className="line-clamp-2 font-semibold leading-snug hover:underline"
                           title="История выплат работнику"
                         >
@@ -288,7 +316,7 @@ export function WorkersManager({ initialWorkers }: { initialWorkers: Worker[] })
                       <TableRow key={worker.id}>
                         <TableCell className="font-medium">
                           <Link
-                            href={`/admin/workers/${worker.id}`}
+                            href={workerHref(worker.id)}
                             className="hover:underline"
                             title="История выплат работнику"
                           >
