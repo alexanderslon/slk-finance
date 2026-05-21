@@ -29,8 +29,8 @@ import { parseSmetaNumber } from '@/lib/smeta-numbers'
 import { normalizeDocRows } from '@/lib/smeta-row-normalize'
 import type { DocState, HeaderData, RowData, SmetaMainStageKey, SmetaStage, SmetaVariantId } from '@/lib/smeta-types'
 import {
-  ADDITIONAL_WORK_STAGE,
   emptyTotalsByStage,
+  SMETA_ADDITIONAL_STAGES,
   SMETA_MATERIAL_STAGES,
   SMETA_EMPTY_ROWS,
   SMETA_MAIN_STAGES,
@@ -2164,24 +2164,31 @@ export function ConstructionSmetaCalculator() {
                   </label>
                 )
               })}
-              <label
-                key={ADDITIONAL_WORK_STAGE}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 ${
-                  enabledStages.length === 1 && enabledStages[0] === ADDITIONAL_WORK_STAGE ? 'opacity-90' : ''
-                }`}
-              >
-                <Checkbox
-                  checked={enabledStages.includes(ADDITIONAL_WORK_STAGE)}
-                  disabled={enabledStages.length === 1 && enabledStages[0] === ADDITIONAL_WORK_STAGE}
-                  onCheckedChange={(c) => toggleStageEnabled(ADDITIONAL_WORK_STAGE, c === true)}
-                  aria-label={`Доп. работы${
-                    enabledStages.length === 1 && enabledStages[0] === ADDITIONAL_WORK_STAGE
-                      ? ', нельзя отключить последний этап'
-                      : ''
-                  }`}
-                />
-                <span>Доп. работы</span>
-              </label>
+              <div className="w-full basis-full">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Доп. работы
+                </p>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {SMETA_ADDITIONAL_STAGES.map((st) => {
+                    const onlyOne = enabledStages.length === 1 && enabledStages[0] === st
+                    const label = stageLabel(st)
+                    return (
+                      <label
+                        key={st}
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 ${onlyOne ? 'opacity-90' : ''}`}
+                      >
+                        <Checkbox
+                          checked={enabledStages.includes(st)}
+                          disabled={onlyOne}
+                          onCheckedChange={(c) => toggleStageEnabled(st, c === true)}
+                          aria-label={`${label}${onlyOne ? ', нельзя отключить последний этап' : ''}`}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
               <div className="w-full basis-full">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                   Материалы

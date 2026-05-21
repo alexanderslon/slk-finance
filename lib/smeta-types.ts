@@ -1,7 +1,7 @@
 /** Состояние калькулятора смет (construction app). */
 
-/** 1–4 — основные этапы, 5 — доп. работы, 6–10 — материалы 1–5. */
-export type SmetaStage = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+/** 1–4 — основные этапы, 5 и 11–14 — доп. работы 1–5, 6–10 — материалы 1–5. */
+export type SmetaStage = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14
 
 /** Основные этапы (чекбоксы 1–4). */
 export const SMETA_MAIN_STAGES = [1, 2, 3, 4] as const satisfies readonly SmetaStage[]
@@ -12,8 +12,23 @@ export type SmetaMainStageKey = (typeof SMETA_MAIN_STAGES)[number]
 /** Срок выполнения работ по этапам 1–4 — свободный текст (даты, календарные дни и т.д.). */
 export type SmetaStageDeadlines = Partial<Record<SmetaMainStageKey, string>>
 
-/** Этап «доп. работы». */
-export const ADDITIONAL_WORK_STAGE = 5 as const satisfies SmetaStage
+/** Доп. работа 1 (раньше единый этап «Доп. работы» — stage 5 в старых сметах). */
+export const ADDITIONAL_1_STAGE = 5 as const satisfies SmetaStage
+export const ADDITIONAL_2_STAGE = 11 as const satisfies SmetaStage
+export const ADDITIONAL_3_STAGE = 12 as const satisfies SmetaStage
+export const ADDITIONAL_4_STAGE = 13 as const satisfies SmetaStage
+export const ADDITIONAL_5_STAGE = 14 as const satisfies SmetaStage
+
+/** @deprecated Используйте ADDITIONAL_1_STAGE */
+export const ADDITIONAL_WORK_STAGE = ADDITIONAL_1_STAGE
+
+export const SMETA_ADDITIONAL_STAGES = [
+  ADDITIONAL_1_STAGE,
+  ADDITIONAL_2_STAGE,
+  ADDITIONAL_3_STAGE,
+  ADDITIONAL_4_STAGE,
+  ADDITIONAL_5_STAGE,
+] as const satisfies readonly SmetaStage[]
 
 /** Материал 1 (раньше единый этап «Материалы» — stage 6 в старых сметах). */
 export const MATERIAL_1_STAGE = 6 as const satisfies SmetaStage
@@ -34,7 +49,13 @@ export const SMETA_MATERIAL_STAGES = [
 ] as const satisfies readonly SmetaStage[]
 
 /** Порядок этапов в таблице и сортировке строк. */
-export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [
+  1, 2, 3, 4,
+  5, 11, 12, 13, 14,
+  6, 7, 8, 9, 10,
+]
+
+const SMETA_STAGE_SET = new Set<SmetaStage>(SMETA_STAGE_ORDER)
 
 /** Вариант сметы — заголовок печати и набор типовых позиций при «Новая смета». */
 export type SmetaVariantId =
@@ -152,8 +173,19 @@ export function nextRowIdFromRows(rows: RowData[]): number {
 
 export function normalizeSmetaStage(v: unknown): SmetaStage {
   const n = typeof v === 'number' ? v : typeof v === 'string' ? parseInt(v, 10) : NaN
-  if (n >= 1 && n <= 10) return n as SmetaStage
+  if (SMETA_STAGE_SET.has(n as SmetaStage)) return n as SmetaStage
   return 1
+}
+
+export function isAdditionalStage(st: SmetaStage): st is (typeof SMETA_ADDITIONAL_STAGES)[number] {
+  return st === ADDITIONAL_1_STAGE || (st >= ADDITIONAL_2_STAGE && st <= ADDITIONAL_5_STAGE)
+}
+
+/** Номер доп. работы 1–5 (этапы 5, 11–14). */
+export function additionalStageNumber(st: SmetaStage): number | null {
+  if (st === ADDITIONAL_1_STAGE) return 1
+  if (st >= ADDITIONAL_2_STAGE && st <= ADDITIONAL_5_STAGE) return st - 9
+  return null
 }
 
 export function isMaterialStage(st: SmetaStage): st is (typeof SMETA_MATERIAL_STAGES)[number] {
@@ -221,7 +253,8 @@ export function firstEnabledStage(stages: readonly SmetaStage[]): SmetaStage {
 }
 
 export function stageLabel(st: SmetaStage): string {
-  if (st === ADDITIONAL_WORK_STAGE) return 'Доп. работы'
+  const an = additionalStageNumber(st)
+  if (an !== null) return `Доп. работа ${an}`
   const mn = materialStageNumber(st)
   if (mn !== null) return `Материал ${mn}`
   return `Этап ${st}`
@@ -229,7 +262,8 @@ export function stageLabel(st: SmetaStage): string {
 
 /** Подпись строки итога по блоку этапа (таблица / печать). */
 export function stageSubtotalLabel(st: SmetaStage): string {
-  if (st === ADDITIONAL_WORK_STAGE) return 'Итого (доп. работы):'
+  const an = additionalStageNumber(st)
+  if (an !== null) return `Итого (доп. работа ${an}):`
   const mn = materialStageNumber(st)
   if (mn !== null) return `Итого (материал ${mn}):`
   return `Итого по этапу ${st}:`
