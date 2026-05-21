@@ -30,7 +30,8 @@ import { normalizeDocRows } from '@/lib/smeta-row-normalize'
 import type { DocState, HeaderData, RowData, SmetaMainStageKey, SmetaStage, SmetaVariantId } from '@/lib/smeta-types'
 import {
   ADDITIONAL_WORK_STAGE,
-  MATERIALS_STAGE,
+  emptyTotalsByStage,
+  SMETA_MATERIAL_STAGES,
   SMETA_EMPTY_ROWS,
   SMETA_MAIN_STAGES,
   SMETA_STAGE_ORDER,
@@ -588,14 +589,7 @@ export function ConstructionSmetaCalculator() {
   }, [visibleRows, prepayment, laborer, otkat, overheadPercent, customerDiscountPercent])
 
   const totalsByStage = useMemo(() => {
-    const m: Record<SmetaStage, { upper: number; worker: number }> = {
-      1: { upper: 0, worker: 0 },
-      2: { upper: 0, worker: 0 },
-      3: { upper: 0, worker: 0 },
-      4: { upper: 0, worker: 0 },
-      5: { upper: 0, worker: 0 },
-      6: { upper: 0, worker: 0 },
-    }
+    const m = emptyTotalsByStage()
     for (const r of visibleRows) {
       const st = normalizeSmetaStage(r.stage)
       const q = toNumber(r.quantity)
@@ -2188,24 +2182,31 @@ export function ConstructionSmetaCalculator() {
                 />
                 <span>Доп. работы</span>
               </label>
-              <label
-                key={MATERIALS_STAGE}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 ${
-                  enabledStages.length === 1 && enabledStages[0] === MATERIALS_STAGE ? 'opacity-90' : ''
-                }`}
-              >
-                <Checkbox
-                  checked={enabledStages.includes(MATERIALS_STAGE)}
-                  disabled={enabledStages.length === 1 && enabledStages[0] === MATERIALS_STAGE}
-                  onCheckedChange={(c) => toggleStageEnabled(MATERIALS_STAGE, c === true)}
-                  aria-label={`Материалы${
-                    enabledStages.length === 1 && enabledStages[0] === MATERIALS_STAGE
-                      ? ', нельзя отключить последний этап'
-                      : ''
-                  }`}
-                />
-                <span>Материалы</span>
-              </label>
+              <div className="w-full basis-full">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Материалы
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {SMETA_MATERIAL_STAGES.map((st) => {
+                    const onlyOne = enabledStages.length === 1 && enabledStages[0] === st
+                    const label = stageLabel(st)
+                    return (
+                      <label
+                        key={st}
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50/90 px-2.5 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 ${onlyOne ? 'opacity-90' : ''}`}
+                      >
+                        <Checkbox
+                          checked={enabledStages.includes(st)}
+                          disabled={onlyOne}
+                          onCheckedChange={(c) => toggleStageEnabled(st, c === true)}
+                          aria-label={`${label}${onlyOne ? ', нельзя отключить последний этап' : ''}`}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
             {hiddenRowsCount > 0 ? (
               <p className="text-xs text-amber-800">

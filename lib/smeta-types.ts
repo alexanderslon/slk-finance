@@ -1,7 +1,7 @@
 /** Состояние калькулятора смет (construction app). */
 
-/** 1–4 — основные этапы, 5 — доп. работы, 6 — материалы. */
-export type SmetaStage = 1 | 2 | 3 | 4 | 5 | 6
+/** 1–4 — основные этапы, 5 — доп. работы, 6–10 — материалы 1–5. */
+export type SmetaStage = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
 
 /** Основные этапы (чекбоксы 1–4). */
 export const SMETA_MAIN_STAGES = [1, 2, 3, 4] as const satisfies readonly SmetaStage[]
@@ -15,11 +15,26 @@ export type SmetaStageDeadlines = Partial<Record<SmetaMainStageKey, string>>
 /** Этап «доп. работы». */
 export const ADDITIONAL_WORK_STAGE = 5 as const satisfies SmetaStage
 
-/** Этап «материалы». */
-export const MATERIALS_STAGE = 6 as const satisfies SmetaStage
+/** Материал 1 (раньше единый этап «Материалы» — stage 6 в старых сметах). */
+export const MATERIAL_1_STAGE = 6 as const satisfies SmetaStage
+export const MATERIAL_2_STAGE = 7 as const satisfies SmetaStage
+export const MATERIAL_3_STAGE = 8 as const satisfies SmetaStage
+export const MATERIAL_4_STAGE = 9 as const satisfies SmetaStage
+export const MATERIAL_5_STAGE = 10 as const satisfies SmetaStage
+
+/** @deprecated Используйте MATERIAL_1_STAGE */
+export const MATERIALS_STAGE = MATERIAL_1_STAGE
+
+export const SMETA_MATERIAL_STAGES = [
+  MATERIAL_1_STAGE,
+  MATERIAL_2_STAGE,
+  MATERIAL_3_STAGE,
+  MATERIAL_4_STAGE,
+  MATERIAL_5_STAGE,
+] as const satisfies readonly SmetaStage[]
 
 /** Порядок этапов в таблице и сортировке строк. */
-export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5, 6]
+export const SMETA_STAGE_ORDER: readonly SmetaStage[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 /** Вариант сметы — заголовок печати и набор типовых позиций при «Новая смета». */
 export type SmetaVariantId =
@@ -137,12 +152,24 @@ export function nextRowIdFromRows(rows: RowData[]): number {
 
 export function normalizeSmetaStage(v: unknown): SmetaStage {
   const n = typeof v === 'number' ? v : typeof v === 'string' ? parseInt(v, 10) : NaN
-  if (n === 2) return 2
-  if (n === 3) return 3
-  if (n === 4) return 4
-  if (n === 5) return 5
-  if (n === 6) return 6
+  if (n >= 1 && n <= 10) return n as SmetaStage
   return 1
+}
+
+export function isMaterialStage(st: SmetaStage): st is (typeof SMETA_MATERIAL_STAGES)[number] {
+  return st >= MATERIAL_1_STAGE && st <= MATERIAL_5_STAGE
+}
+
+/** Номер материала 1–5 для этапов 6–10. */
+export function materialStageNumber(st: SmetaStage): number | null {
+  if (!isMaterialStage(st)) return null
+  return st - MATERIAL_1_STAGE + 1
+}
+
+export function emptyTotalsByStage(): Record<SmetaStage, { upper: number; worker: number }> {
+  return Object.fromEntries(
+    SMETA_STAGE_ORDER.map((s) => [s, { upper: 0, worker: 0 }]),
+  ) as Record<SmetaStage, { upper: number; worker: number }>
 }
 
 /** Нормализация сроков: оставляем только строки по ключам 1–4. */
@@ -195,13 +222,15 @@ export function firstEnabledStage(stages: readonly SmetaStage[]): SmetaStage {
 
 export function stageLabel(st: SmetaStage): string {
   if (st === ADDITIONAL_WORK_STAGE) return 'Доп. работы'
-  if (st === MATERIALS_STAGE) return 'Материалы'
+  const mn = materialStageNumber(st)
+  if (mn !== null) return `Материал ${mn}`
   return `Этап ${st}`
 }
 
 /** Подпись строки итога по блоку этапа (таблица / печать). */
 export function stageSubtotalLabel(st: SmetaStage): string {
   if (st === ADDITIONAL_WORK_STAGE) return 'Итого (доп. работы):'
-  if (st === MATERIALS_STAGE) return 'Итого (материалы):'
+  const mn = materialStageNumber(st)
+  if (mn !== null) return `Итого (материал ${mn}):`
   return `Итого по этапу ${st}:`
 }
